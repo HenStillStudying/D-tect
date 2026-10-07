@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Vitamin D Deficiency Check</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Top-right controls: day/night switch + language toggle (buttons injected by i18n.js) -->
+  <div class="top-controls" id="topControls">
+    <label class="theme-switch" title="Toggle day / night">
+      <input type="checkbox" id="themeToggle">
+      <span class="slider round">
+        <span class="icon sun">☀️</span>
+        <span class="icon moon">🌙</span>
+      </span>
+    </label>
+  </div>
+
+  <!-- Background decoration -->
+  <div class="sun-rays"></div>
+  <div class="bg-particles">
+    <span></span><span></span><span></span>
+    <span></span><span></span><span></span>
+  </div>
+
+    <div class="bg-clouds">
+    <span class="cloud-fluffy"></span>
+    <span class="cloud-flat"></span>
+    <span class="cloud-puffy"></span>
+  </div>
+
+  <div class="bg-birds">
+    <span>〰</span><span>〰</span>
+  </div>
+
+  <!-- Night sky (faded in via body.dark-mode) -->
+  <div class="bg-stars"></div>
+  <div class="bg-moon"></div>
+  <div class="bg-shooting-stars">
+    <span></span>
+    <span></span>
+  </div>
+
+   <!-- ADD THESE TWO -->
+  <div class="bg-ocean">
+    <div class="wave wave-back"></div>
+    <div class="wave wave-front"></div>
+  </div>
+
+  
+
+  <div class="bg-beach">
+    <div class="beach-sand"></div>
+<div class="palm-tree">
+      <div class="palm-trunk"></div>
+      <div class="palm-leaf leaf-1"></div>
+      <div class="palm-leaf leaf-2"></div>
+      <div class="palm-leaf leaf-3"></div>
+      <div class="palm-leaf leaf-4"></div>
+      <div class="palm-leaf leaf-5"></div>
+      <div class="palm-leaf leaf-6"></div>
+      <div class="palm-leaf leaf-7"></div>
+   <div class="palm-leaf leaf-8"></div>
+   <div class="palm-leaf leaf-9"></div>
+   <div class="palm-leaf leaf-10"></div>
+    </div>
+
+<div class="campfire">
+  <div class="logs">
+    <div class="log log-1"></div>
+    <div class="log log-2"></div>
+    <div class="log log-3"></div>
+    <div class="log log-4"></div>
+    <div class="log log-5"></div>
+    <div class="log log-6"></div>
+  </div>
+  
+  <div class="fire-glow"></div>
+  <div class="flames">
+    <div class="flame main-flame"></div>
+    <div class="flame small-flame"></div>
+  </div>
+</div>
+  </div>
+
+  <div class="container full-page">
+
+    <!-- Intro Section -->
+    <div id="introSection" class="card full-height">
+      <div class="header">
+        <div class="icon">☀️</div>
+        <h1>Vitamin D Deficiency<br>Early Detection Check</h1>
+        <p>Answer quick questions about your lifestyle, symptoms, and risk factors.
+        In under 15 minutes, get a personalized vitamin D risk assessment.</p>
+        <p class="disclaimer"><strong>Disclaimer:</strong> This tool is for informational purposes only, not a medical diagnosis.</p>
+      </div>
+
+      <div class="categories-grid">
+        <div class="category-item category-sun">☀️ Sun Exposure</div>
+        <div class="category-item category-diet">🥗 Diet & Supplements</div>
+        <div class="category-item category-symptoms">💤 Symptoms</div>
+        <div class="category-item category-risk">⚠️ Risk Factors</div>
+      </div>
+
+      <div id="startScreen" class="start-area">
+        <button id="startBtn" class="start-btn">Start Assessment →</button> <br>
+        <button id="historyBtn" class="secondary-btn" style="margin-left:12px;"> View History</button> <br>
+
+<button id="randomFillBtn" onclick="randomFill()" style="
+  margin-top: 10px;
+  padding: 8px 18px;
+  background: #9c27b0;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.85em;
+  cursor: pointer;
+  opacity: 0.85;
+">🎲 Random Fill</button>
+<button onclick="bestCaseRun()" style="
+  margin-top: 10px;
+  padding: 8px 18px;
+  background: #4caf50;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.85em;
+  cursor: pointer;
+">🌟 Best Case</button>
+<button onclick="worstCaseRun()" style="
+  margin-top: 10px;
+  padding: 8px 18px;
+  background: #f44336;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.85em;
+  cursor: pointer;
+">☠️ Worst Case</button>
+        <p class="note">Takes less than 15 minutes</p>
+      </div>
+    </div>
+
+    <!-- Quiz area (content injected by render.js) -->
+    <div id="quiz" class="card full-height hidden"></div>
+
+    <!-- Progress bar -->
+    <div id="progressContainer" class="hidden">
+      <div id="progressText"></div>
+      <div id="progressBar"></div>
+    </div>
+
+    <!-- Next button -->
+    <div id="navButtons" class="hidden">
+      <button id="backBtn" class="hidden secondary-btn">← Back</button>
+      <button id="nextBtn">Next Question</button>
+    </div>
+
+    <!-- Results -->
+    <div id="result"></div>
+
+    <!-- Popup — lives outside #quiz so it survives innerHTML rewrites -->
+    <div id="quizPopup" class="popup hidden">
+      <div class="popup-content">
+        <p id="popupMessage">Please select an option.</p>
+        <button id="popupClose">OK</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Order matters: each file may use globals defined by the files above it -->
+  <script src="js/services/firebase.js"></script>
+  <script src="js/data/data.en.js"></script>
+  <script src="js/data/data.id.js"></script>
+  <script src="js/model/vitd_model.js"></script>
+  <script src="js/core/utils.js"></script>
+  <script src="js/core/state.js"></script>
+  <script src="js/core/scoring.js"></script>
+  <script src="js/ui/ui.js"></script>
+  <script src="js/ui/render.js"></script>
+  <script src="js/ui/results.js"></script>
+  <script src="js/services/history.js"></script>
+  <script src="js/ui/navigation.js"></script>
+  <script src="js/dev/test-fills.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/services/persistence.js"></script>
+  <script src="js/services/pdf-export.js"></script>
+</body>
+</html>

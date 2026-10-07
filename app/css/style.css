@@ -1,0 +1,1645 @@
+/* ─────────────────────────────────────────────
+   BASE
+───────────────────────────────────────────── */
+body {
+  font-family: 'Segoe UI', sans-serif;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+  color: #333;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+
+  /* Warm layered sky background */
+  background-color: #f5a623;
+  background-image:
+    radial-gradient(ellipse at 10% 10%, rgba(255, 235, 100, 0.6) 0%, transparent 50%),
+    radial-gradient(ellipse at 90% 90%, rgba(240, 130, 20, 0.5) 0%, transparent 50%),
+    linear-gradient(160deg, #fceabb 0%, #f8a800 60%, #e07b00 100%);
+
+  transition: background-color 0.5s ease, background-image 0.5s ease, color 0.5s ease;
+}
+
+/* ── DARK MODE: calm night sky ─────────────────── */
+body.dark-mode {
+  color: #e8e8ec;
+  background-color: #10121c;
+  background-image:
+    radial-gradient(ellipse at 10% 10%, rgba(120, 140, 220, 0.25) 0%, transparent 50%),
+    radial-gradient(ellipse at 90% 90%, rgba(80, 60, 160, 0.3) 0%, transparent 50%),
+    linear-gradient(160deg, #1a1d2e 0%, #14162280, #0c0d16 100%);
+}
+
+/* ── Sun orb (top-left glow) ─────────────────── */
+body::before {
+  content: "";
+  position: fixed;
+  top: -120px;
+  left: -120px;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(255, 245, 120, 0.75) 0%,
+    rgba(255, 200, 50, 0.4)  40%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+  animation: pulseSun 7s ease-in-out infinite;
+}
+
+/* ── Secondary warm orb (bottom-right) ──────── */
+body::after {
+  content: "";
+  position: fixed;
+  bottom: -80px;
+  right: -80px;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(255, 160, 30, 0.5) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+  animation: pulseSun 10s ease-in-out infinite reverse;
+}
+
+@keyframes pulseSun {
+  0%, 100% { transform: scale(1);    opacity: 1;    }
+  50%       { transform: scale(1.08); opacity: 0.85; }
+}
+
+
+/* Container to keep the switch and lang buttons together */
+.top-controls {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  z-index: 100; /* Keeps it above the background stuff */
+}
+
+/* The switch wrapper */
+.theme-switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+/* Hide the default checkbox */
+.theme-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The sliding track */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #87ceeb; /* Sky blue for day */
+  transition: 0.4s;
+  border: 2px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 5px;
+  box-sizing: border-box;
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+/* The sliding circle */
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); /* Gives it a tiny bounce */
+  border-radius: 50%;
+  z-index: 2;
+}
+
+/* Dark mode state for the switch */
+input:checked + .slider {
+  background-color: #2c3e50; /* Night sky color */
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+/* Emojis inside the track */
+.slider .icon {
+  font-size: 14px;
+  z-index: 1;
+}
+.slider .sun { transform: translateX(2px); }
+.slider .moon { transform: translateX(-2px); }
+
+.top-controls {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px; /* This adds a nice gap between the toggle and the language buttons */
+  z-index: 100;
+}
+
+/* This resets the language toggle just in case it had 'position: absolute' before */
+#langToggle {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  margin: 0 !important;
+}
+
+/* ── Floating particles ──────────────────────── */
+.bg-particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.bg-particles span {
+  position: absolute;
+  bottom: -20px;
+  border-radius: 50%;
+  background: rgba(255, 248, 180, 0.7);
+  animation: floatUp linear infinite;
+}
+
+.bg-particles span:nth-child(1) { width:10px; height:10px; left:8%;  animation-duration:15s; animation-delay:0s;  }
+.bg-particles span:nth-child(2) { width:6px;  height:6px;  left:22%; animation-duration:20s; animation-delay:4s;  }
+.bg-particles span:nth-child(3) { width:14px; height:14px; left:38%; animation-duration:13s; animation-delay:8s;  }
+.bg-particles span:nth-child(4) { width:8px;  height:8px;  left:55%; animation-duration:18s; animation-delay:2s;  }
+.bg-particles span:nth-child(5) { width:12px; height:12px; left:72%; animation-duration:16s; animation-delay:6s;  }
+.bg-particles span:nth-child(6) { width:7px;  height:7px;  left:88%; animation-duration:22s; animation-delay:10s; }
+
+@keyframes floatUp {
+  0%   { transform: translateY(0)      scale(0.8); opacity: 0;    }
+  10%  { opacity: 0.5; }
+  90%  { opacity: 0.3; }
+  100% { transform: translateY(-105vh) scale(1.1); opacity: 0;    }
+}
+/* ── Drifting clouds ──────────────────────────── */
+.bg-clouds {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.bg-clouds span {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 50px;
+  filter: blur(1px);
+  animation-name: driftCloud;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.bg-clouds span::before,
+.bg-clouds span::after {
+  content: "";
+  position: absolute;
+  background: inherit;
+  border-radius: 50%;
+}
+
+/* ── Shape 1: Fluffy — many small bumps, classic cartoon cloud ── */
+.cloud-fluffy {
+  width: 110px; height: 36px;
+  top: 12%; left: -160px;
+  animation-duration: 55s; animation-delay: 0s;
+  box-shadow:
+    18px -14px 0 -4px rgba(255,255,255,0.55),
+    40px -20px 0 -2px rgba(255,255,255,0.55),
+    65px -12px 0 -6px rgba(255,255,255,0.55);
+}
+.cloud-fluffy::before { width: 50px; height: 50px; top: -22px; left: 12px; }
+.cloud-fluffy::after  { width: 38px; height: 38px; top: -14px; left: 58px; }
+
+/* ── Shape 2: Flat — long, low, stretched-out cloud ── */
+.cloud-flat {
+  width: 170px; height: 22px;
+  top: 26%; left: -200px;
+  border-radius: 30px;
+  animation-duration: 75s; animation-delay: 15s;
+}
+.cloud-flat::before { width: 34px; height: 34px; top: -14px; left: 20px; }
+.cloud-flat::after  { width: 28px; height: 28px; top: -10px; left: 120px; }
+
+/* ── Shape 3: Puffy — small, round, compact cloud ── */
+.cloud-puffy {
+  width: 60px; height: 26px;
+  top: 8%; left: -100px;
+  animation-duration: 40s; animation-delay: 8s;
+}
+.cloud-puffy::before { width: 34px; height: 34px; top: -18px; left: 6px; }
+.cloud-puffy::after  { width: 30px; height: 30px; top: -14px; left: 30px; }
+
+@keyframes driftCloud {
+  from { transform: translateX(0); }
+  to   { transform: translateX(calc(100vw + 220px)); }
+}
+
+/* Dark mode: dimmer, cooler clouds */
+body.dark-mode .bg-clouds span {
+  background: rgba(200, 205, 230, 0.15);
+}
+body.dark-mode .cloud-fluffy {
+  box-shadow:
+    18px -14px 0 -4px rgba(200,205,230,0.15),
+    40px -20px 0 -2px rgba(200,205,230,0.15),
+    65px -12px 0 -6px rgba(200,205,230,0.15);
+}
+/* ── Birds (simple flying marks) ──────────────── */
+.bg-birds {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.bg-birds span {
+  position: absolute;
+  font-size: 1.1em;
+  color: rgba(90, 60, 20, 0.45);
+  animation: flyBird linear infinite;
+}
+
+.bg-birds span:nth-child(1) { top: 18%; left: -40px; animation-duration: 22s; animation-delay: 3s; }
+.bg-birds span:nth-child(2) { top: 32%; left: -60px; animation-duration: 28s; animation-delay: 14s; }
+
+@keyframes flyBird {
+  0%   { transform: translate(0, 0);       opacity: 0; }
+  8%   { opacity: 0.7; }
+  92%  { opacity: 0.7; }
+  100% { transform: translate(115vw, -30px); opacity: 0; }
+}
+
+body.dark-mode .bg-birds span {
+  color: rgba(220, 220, 235, 0.3);
+}
+
+/* ── Ocean waves (bottom of screen) ───────────── */
+.bg-ocean {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 130px;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.wave {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  background-repeat: repeat-x;
+  background-size: 1440px 100%;
+}
+
+.wave-back {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 120'><path d='M0,40 C240,90 480,0 720,40 C960,80 1200,10 1440,40 L1440,120 L0,120 Z' fill='%23aeddf5'/></svg>");
+  opacity: 0.65;
+  animation: waveScroll 18s linear infinite;
+}
+
+.wave-front {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 120'><path d='M0,60 C240,20 480,100 720,60 C960,20 1200,100 1440,60 L1440,120 L0,120 Z' fill='%234fa8d8'/></svg>");
+  opacity: 0.85;
+  animation: waveScroll 11s linear infinite reverse;
+}
+
+@keyframes waveScroll {
+  from { background-position-x: 0; }
+  to   { background-position-x: -1440px; }
+}
+
+body.dark-mode .bg-ocean {
+  filter: brightness(0.4) saturate(0.7);
+}
+
+/* ── Beach corner (bottom-right) ──────────────── */
+.bg-beach {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 240px;
+  height: 220px;
+  z-index: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.beach-sand {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 220px;
+  height: 140px;
+  background: linear-gradient(160deg, #f6e4b8 0%, #eccf8f 100%);
+  border-top-left-radius: 100% 80%;
+}
+
+
+.palm-trunk {
+  position: absolute;
+  bottom: 70px;
+  right: 60px;
+  width: 14px;
+  height: 90px;
+  background: linear-gradient(90deg, #8a5a2b, #6b4321);
+  border-radius: 6px;
+  transform: rotate(5deg);
+  transform-origin: bottom center;
+}
+
+.palm-trunk {
+  position: absolute;
+  bottom: 70px;
+  right: 85px;
+  width: 14px;
+  height: 90px;
+  background: linear-gradient(90deg, #8a5a2b, #6b4321);
+  border-radius: 6px;
+  transform: rotate(5deg);
+  transform-origin: bottom center;
+}
+
+.palm-leaf {
+  position: absolute;
+  bottom: 147px;
+  right: 2px;
+  width: 90px;
+  height: 26px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 34'><path d='M2,20 C25,2 55,-6 95,4 C110,8 118,14 120,20 C104,26 78,30 50,28 C28,26 10,24 2,20 Z' fill='%233f9142'/></svg>");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  transform-origin: left center;
+}
+
+.leaf-1 { transform: rotate(-190deg) scale(0.85); filter: brightness(0.85); }
+.leaf-2 { transform: rotate(-130deg) scale(0.95); }
+.leaf-3 { transform: rotate(-100deg) scale(1);    }
+.leaf-4 { transform: rotate(-75deg)  scale(1.05); filter: brightness(1.08); }
+.leaf-5 { transform: rotate(-45deg)  scale(1);    }
+.leaf-6 { transform: rotate(-20deg)  scale(0.95); }
+.leaf-7 { transform: rotate(10deg)   scale(0.85); filter: brightness(0.85); }
+.leaf-8 { transform: rotate(-165deg) scale(0.85); filter: brightness(0.85); }
+.leaf-9 { transform: rotate(-210deg) scale(0.85); filter: brightness(0.75); }
+.leaf-10 { transform: rotate(-85deg) scale(0.85); filter: brightness(0.65); }
+body.dark-mode .bg-beach {
+  filter: brightness(0.55) saturate(0.75);
+}
+
+/* Hide the beach on small screens so it doesn't crowd the quiz card */
+@media (max-width: 480px) {
+  .bg-beach { display: none; }
+}
+/* ── Campfire Placement ── */
+.campfire {
+  position: absolute;
+  bottom: 25px;
+  right: 140px; 
+  width: 60px;
+  height: 40px;
+  z-index: 1;
+}
+
+/* ── Logs ── */
+.logs {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 25px;
+  z-index: 2;
+}
+
+.log {
+  position: absolute;
+  width: 35px;
+  height: 8px;
+  background: #5c3a21;
+  border-radius: 5px;
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.4), 0 2px 2px rgba(0,0,0,0.3);
+}
+
+/* Stack them using exact left positions so they can't fly away */
+.log-1 { left: 0px;  bottom: 0px; transform: rotate(15deg); z-index: 1; }
+.log-2 { left: 15px; bottom: 0px; transform: rotate(-15deg); z-index: 1; }
+.log-3 { left: 5px;  bottom: 5px; transform: rotate(35deg); z-index: 2; }
+.log-4 { left: 10px; bottom: 6px; transform: rotate(-35deg); z-index: 2; }
+.log-5 { left: -2px; bottom: 2px; transform: rotate(-10deg); z-index: 3; width: 30px; }
+.log-6 { left: 12px; bottom: 10px; transform: rotate(15deg); z-index: 3; width: 30px; }
+
+/* ── Flames ── */
+.flames {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 40px;
+  opacity: 0; /* Hidden by default */
+  transition: opacity 0.5s ease;
+  z-index: 3;
+}
+
+.flame {
+  position: absolute;
+  bottom: 0;
+  background: #ff9800;
+  border-radius: 50% 0 50% 50%; /* Makes a nice teardrop shape */
+  transform: rotate(-45deg);
+  box-shadow: inset 2px 2px 0 rgba(255, 235, 59, 0.7);
+}
+
+.main-flame {
+  left: 5px;
+  width: 22px;
+  height: 22px;
+  animation: flicker 0.5s ease-in-out infinite alternate;
+}
+
+.small-flame {
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  background: #ffc107;
+  animation: flicker 0.3s ease-in-out infinite alternate;
+}
+
+/* ── The Ambient Glow ── */
+.fire-glow {
+  position: absolute;
+  bottom: -20px;
+  left: -40px; /* Shifted left to stay centered with the larger width */
+  width: 140px; /* Increased from 100px */
+  height: 70px; /* Increased from 50px */
+  
+  /* Made the center orange much stronger (0.7 opacity instead of 0.5) */
+  background: radial-gradient(circle, rgba(255, 140, 0, 0.75) 0%, rgba(255, 100, 0, 0.25) 50%, transparent 80%);
+  border-radius: 50%;
+  
+  /* Added a secondary glowing shadow to bleed light onto the sand */
+  box-shadow: 0 0 40px rgba(255, 152, 0, 0.4);
+  
+  opacity: 0; 
+  transition: opacity 0.5s ease;
+  z-index: 1;
+  /* pulseGlow animation is applied only in dark mode below — putting it
+     here would make its own keyframe opacity (0.7–1) override this
+     opacity:0, so the glow would show during the day too. */
+}
+
+/* ── Animations ── */
+/* Ensure your flicker animation is still here! */
+@keyframes flicker {
+  0% { transform: rotate(-45deg) scale(0.9); }
+  100% { transform: rotate(-45deg) scale(1.1); }
+}
+
+/* Upgraded pulse to make the light expand further and brighter */
+@keyframes pulseGlow {
+  0% { transform: scale(0.95); opacity: 0.7; }
+  100% { transform: scale(1.3); opacity: 1; }
+}
+
+/* ── The Magic Switch (Dark Mode) ── */
+/* When body has .dark-mode, fade the fire and glow in! */
+body.dark-mode .flames,
+body.dark-mode .fire-glow {
+  opacity: 1;
+}
+
+body.dark-mode .fire-glow {
+  animation: pulseGlow 1.5s infinite alternate ease-in-out;
+}
+
+/* ── The Starry Sky ── */
+.bg-stars {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  /* A quick CSS trick to make a field of stars without needing an image */
+  background-image: 
+    radial-gradient(1px 1px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 40px 70px, #e0e0e0, rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 160px 120px, #f4f4f4, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 200px 90px, #ffffff, rgba(0,0,0,0));
+  background-repeat: repeat;
+  background-size: 250px 250px;
+}
+
+body.dark-mode .bg-stars {
+  opacity: 1; /* Fade stars in during dark mode */
+}
+
+.bg-stars::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 60px 15px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 135px 95px, #e8e8ec, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 185px 45px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 25px 160px, #f4f4f4, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 225px 205px, #ffffff, rgba(0,0,0,0));
+  background-repeat: repeat;
+  background-size: 250px 250px;
+  animation: twinkle 4s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 1; }
+}
+
+/* ── The Moon ── */
+.bg-moon {
+  position: fixed;
+  top: 40px;
+  left: 40px; /* Kept on the left side to balance the buttons on the right */
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: #f4f6f0;
+  /* Adds a glow outside and a small shadow inside to give it a moon shape */
+  box-shadow: 0 0 50px rgba(255, 255, 255, 0.3), inset -12px -12px 0 0px #e0e5d0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-40px); /* Starts a bit high */
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+body.dark-mode .bg-moon {
+  opacity: 1;
+  transform: translateY(0); /* Slides down into place nicely */
+  animation: moonGlow 6s ease-in-out infinite;
+}
+
+@keyframes moonGlow {
+  0%, 100% { box-shadow: 0 0 50px rgba(255, 255, 255, 0.3), inset -12px -12px 0 0px #e0e5d0; }
+  50%      { box-shadow: 0 0 72px rgba(255, 255, 255, 0.45), inset -12px -12px 0 0px #e0e5d0; }
+}
+
+/* ── Shooting stars (night only) ──────────────── */
+.bg-shooting-stars {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+body.dark-mode .bg-shooting-stars {
+  opacity: 1;
+}
+
+.bg-shooting-stars span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 130px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,0));
+  border-radius: 2px;
+  opacity: 0;
+  transform: rotate(-35deg);
+}
+
+.bg-shooting-stars span:nth-child(1) {
+  top: 14%;
+  left: 65%;
+  animation: shootingStar 8s linear infinite;
+  animation-delay: 2s;
+}
+
+.bg-shooting-stars span:nth-child(2) {
+  top: 48%;
+  left: 25%;
+  animation: shootingStar 11s linear infinite;
+  animation-delay: 6.5s;
+}
+
+@keyframes shootingStar {
+  0%   { transform: rotate(-35deg) translateX(0);     opacity: 0; }
+  2%   { opacity: 1; }
+  10%  { transform: rotate(-35deg) translateX(-260px); opacity: 0; }
+  100% { transform: rotate(-35deg) translateX(-260px); opacity: 0; }
+}
+
+/* ── Hiding the Day Elements ── */
+/* When dark mode is active, hide the sun-specific stuff — clouds stay,
+   just dimmed (see body.dark-mode .bg-clouds span further down), so
+   the night sky isn't completely static. */
+body.dark-mode .sun-rays,
+body.dark-mode::before, /* Hides the big sun orb */
+body.dark-mode::after {
+  opacity: 0 !important;
+  visibility: hidden;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+/* ── Sun rays ────────────────────────────────── */
+.sun-rays {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.sun-rays::before,
+.sun-rays::after {
+  content: "";
+  position: absolute;
+  top: -200px;
+  left: -200px;
+  width: 800px;
+  height: 800px;
+  background: repeating-conic-gradient(
+    rgba(255, 240, 100, 0.06) 0deg 10deg,
+    transparent             10deg 20deg
+  );
+  border-radius: 50%;
+  animation: spinRays 40s linear infinite;
+  transform-origin: center center;
+}
+
+.sun-rays::after {
+  animation-direction: reverse;
+  animation-duration: 60s;
+  background: repeating-conic-gradient(
+    rgba(255, 200, 60, 0.04) 0deg 15deg,
+    transparent             15deg 30deg
+  );
+}
+
+@keyframes spinRays {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Make sure content stays above bg ────────── */
+.container,
+#langToggle,
+#nextBtn,
+#progressContainer,
+#result {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* ─────────────────────────────────────────────
+   LAYOUT
+───────────────────────────────────────────── */
+.container {
+  max-width: 650px;
+  margin: auto;
+  background: #fff;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+
+.container.full-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.card.full-height {
+  width: 100%;
+  max-width: 700px;
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.13);
+  padding: 28px;
+  margin-bottom: 20px;
+  backdrop-filter: blur(4px);
+  box-sizing: border-box;
+}
+
+#quiz.card.full-height {
+  justify-content: flex-start;
+}
+
+/* ─────────────────────────────────────────────
+   BUTTONS
+───────────────────────────────────────────── */
+button {
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: #ff9800;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1em;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.3s;
+}
+
+button:hover {
+  background: #e68900;
+  transform: scale(1.05);
+}
+
+#navButtons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 0;
+}
+
+.secondary-btn {
+  background: #fff;
+  color: #ff9800;
+  border: 2px solid #ff9800;
+}
+
+.secondary-btn:hover {
+  background: #fff3e0;
+  color: #e65100;
+  transform: scale(1.05);
+}
+
+.start-btn {
+  margin-top: 20px;
+  padding: 14px 28px;
+  background: #ff9800;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.start-btn:hover { background: #e68900; }
+
+.retry-btn {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background: #2196f3;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.retry-btn:hover { background: #1976d2; }
+
+.download-btn {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background: #fff;
+  border: 2px solid #ff9800;
+  border-radius: 6px;
+  color: #ff9800;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.3s, color 0.3s;
+}
+
+.download-btn:hover {
+  background: #ff9800;
+  color: #fff;
+}
+
+.result-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+/* ─────────────────────────────────────────────
+   OPTIONS
+───────────────────────────────────────────── */
+.option-column {
+  display: block;
+  text-align: left;
+  margin: 10px 0;
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s, box-shadow 0.2s;
+}
+
+.option-column:hover {
+  background: #ffe0b2;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.option-column.selected {
+  background: #ffe0b2;
+}
+
+/* ─────────────────────────────────────────────
+   PROGRESS
+───────────────────────────────────────────── */
+.hidden { display: none !important; }
+
+#quiz {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+#quiz.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#progressContainer {
+  width: 100%;
+  max-width: 700px;
+  background: rgba(255,255,255,0.4);
+  border-radius: 6px;
+  margin: 0 0 16px;
+}
+
+#progressText {
+  text-align: center;
+  font-size: 0.8em;
+  font-weight: 600;
+  color: #7a5210;
+  margin-bottom: 6px;
+}
+
+#progressBar {
+  height: 12px;
+  width: 0%;
+  background: #ff9800;
+  border-radius: 6px;
+  transition: width 0.5s ease;
+}
+
+/* ─────────────────────────────────────────────
+   RESULTS
+───────────────────────────────────────────── */
+#result {
+  margin-top: 20px;
+  font-size: 1.4em;
+  font-weight: bold;
+  width: 100%;
+  max-width: 700px;
+  opacity: 0;
+  transform: translateY(15px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+#result.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.green  { color: #4caf50; }
+.yellow { color: #fbc02d; }
+.orange { color: #fb8c00; }
+.red    { color: #f44336; }
+
+.result-card {
+  margin-top: 16px;
+  padding: 16px 16px 16px 18px;
+  border-radius: 10px;
+  text-align: left;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.result-card-title {
+  font-size: 0.8em;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+.score-card {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-left: 4px solid #ff9800; /* fallback — JS sets this per-result to match the risk color */
+}
+
+.score-number {
+  font-size: 3em;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+
+.score-bar-track {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  border-radius: 6px;
+  overflow: visible;
+  margin-bottom: 18px;
+  background: linear-gradient(90deg, #4caf50, #fbc02d, #fb8c00, #f44336);
+}
+
+.score-bar-fill {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid #333; /* fallback — JS sets border-color to match the risk color */
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  transition: left 1s ease;
+}
+
+.score-label   { font-size: 1em; font-weight: bold; margin-bottom: 4px; }
+.score-subtext { font-size: 0.75em; color: #aaa; }
+
+.serum-card {
+  background: #f8fbff;
+  border: 1px solid #e3edfa;
+  border-left: 4px solid #1565c0;
+}
+
+.serum-unit-toggle {
+  display: inline-flex;
+  gap: 4px;
+  background: rgba(21, 101, 192, 0.08);
+  border-radius: 20px;
+  padding: 3px;
+  margin-bottom: 8px;
+}
+
+.serum-unit-toggle button {
+  margin: 0;
+  padding: 4px 12px;
+  font-size: 0.72em;
+  font-weight: 600;
+  border-radius: 16px;
+  background: transparent;
+  color: #1565c0;
+  box-shadow: none;
+}
+
+.serum-unit-toggle button:hover {
+  background: rgba(21, 101, 192, 0.12);
+  transform: none;
+}
+
+.serum-unit-toggle button.active {
+  background: #1565c0;
+  color: #fff;
+}
+
+.serum-value {
+  font-size: 2.4em;
+  font-weight: 800;
+  color: #1565c0;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.serum-unit       { font-size: 0.5em; font-weight: normal; color: #555; }
+.serum-flag       { font-size: 0.95em; font-weight: bold; margin-bottom: 8px; }
+.serum-disclaimer {
+  font-size: 0.72em;
+  color: #777;
+  line-height: 1.5;
+  border-top: 1px solid #dce8fb;
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.risk-card {
+  background: #fffaf5;
+  border: 1px solid #f5e6d3;
+  border-left: 4px solid #fb8c00; /* fallback — JS sets this per-result to match the risk color */
+}
+
+.risk-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.85em;
+  color: #444;
+  line-height: 1.9;
+}
+
+.risk-list li { margin-bottom: 2px; }
+
+.suggestion-box {
+  margin-top: 20px;
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  padding: 12px;
+  border-radius: 6px;
+  text-align: left;
+  font-size: 0.70em;
+  line-height: 1.4;
+  color: #333;
+}
+
+.suggestion-box h4 { margin: 0 0 8px; font-size: 1.05em; color: #1976d2; }
+
+/* ─────────────────────────────────────────────
+   INFO BOX
+───────────────────────────────────────────── */
+.info-box {
+  margin-top: 15px;
+  background: #fff8e1;
+  border-left: 5px solid #ff9800;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 0.95em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.info-header   { font-weight: bold; }
+.info-content  { display: none; margin-top: 8px; color: #555; }
+
+.info-box.open .info-content { display: block; }
+
+/* ─────────────────────────────────────────────
+   SLIDER
+───────────────────────────────────────────── */
+.slider-container { margin: 25px 0; text-align: center; }
+
+input[type=range] { width: 100%; -webkit-appearance: none; background: transparent; }
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 20px; width: 20px;
+  border-radius: 50%;
+  background: #ff9800;
+  cursor: pointer;
+  margin-top: -8px;
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+  height: 6px; background: #ddd; border-radius: 3px;
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 0.9em;
+  color: #555;
+}
+
+.slider-value-box {
+  margin-top: 12px;
+  background: #ffe0b2;
+  padding: 8px 12px;
+  border-radius: 6px;
+  display: inline-block;
+  font-weight: bold;
+  color: #333;
+  transition: background 0.3s;
+}
+
+/* ─────────────────────────────────────────────
+   TEXT INPUTS
+───────────────────────────────────────────── */
+.text-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.text-input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 16px;
+  font-size: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #fff;
+  color: #333;
+  box-sizing: border-box;
+}
+
+.text-input:focus {
+  border-color: #f5a623;
+  box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.15);
+}
+
+.input-unit { font-size: 0.9rem; color: #888; white-space: nowrap; flex-shrink: 0; }
+
+/* ─────────────────────────────────────────────
+   CHAPTER INTRO
+───────────────────────────────────────────── */
+.chapter-intro {
+  padding: 20px 10px;
+  background: #fff3e0;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.chapter-badge {
+  display: inline-block;
+  background: #fff3e0;
+  color: #e65100;
+  font-size: 0.8em;
+  font-weight: bold;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.chapter-title    { font-size: 1.6em; color: #333; margin: 8px 0; }
+.chapter-subtitle { font-size: 0.95em; color: #666; margin: 6px 0 12px; line-height: 1.5; }
+.chapter-count    { font-size: 0.85em; color: #999; }
+
+.chapter-label { font-size: 0.8em; color: #888; margin-bottom: 8px; text-align: left; }
+
+/* ─────────────────────────────────────────────
+   HEADER / START SCREEN
+───────────────────────────────────────────── */
+.header           { margin-bottom: 20px; }
+.header .icon     { font-size: 3em; }
+.header h1        { margin: 10px 0; font-size: 1.8em; color: #333; }
+.header p         { margin: 5px 0; font-size: 1em; color: #555; }
+
+.categories-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.category-item {
+  background: #f0f4f8;
+  border: 1px solid #ddd;
+  border-top: 3px solid #aaa;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 0.95em;
+  text-align: center;
+  color: #333;
+}
+
+.category-item.category-sun      { background: #fff7e6; border-color: #f5dfae; border-top-color: #f5a623; }
+.category-item.category-diet     { background: #eef8ec; border-color: #cfe9c8; border-top-color: #4caf50; }
+.category-item.category-symptoms { background: #eef1fb; border-color: #cdd6f0; border-top-color: #5c6bc0; }
+.category-item.category-risk     { background: #fdeeee; border-color: #f3cdcd; border-top-color: #e05a5a; }
+
+.start-area { text-align: center; margin-top: 20px; }
+
+/* ─────────────────────────────────────────────
+   FITZPATRICK SKIN TONE PICKER
+───────────────────────────────────────────── */
+.skintone-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.skintone-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 10px 6px;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.15s;
+  background: #fff;
+  text-align: center;
+}
+
+.skintone-card:hover {
+  border-color: #ff9800;
+  transform: translateY(-2px);
+}
+
+.skintone-card.selected {
+  border-color: #ff9800;
+  background: #fff8f0;
+  box-shadow: 0 0 0 3px rgba(255,152,0,0.2);
+}
+
+.skintone-swatch {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.1);
+  margin-bottom: 8px;
+}
+
+.skintone-label { font-size: 0.85em; font-weight: bold; color: #333; margin-bottom: 4px; }
+.skintone-desc  { font-size: 0.72em; color: #777; line-height: 1.3; }
+
+/* ─────────────────────────────────────────────
+   POPUP (kept for HTML compatibility)
+───────────────────────────────────────────── */
+.popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff8e1;
+  border: 2px solid #ff9800;
+  border-radius: 10px;
+  padding: 20px;
+  width: 280px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  z-index: 1000;
+  animation: popupFade 0.3s ease;
+}
+
+.popup-content p      { margin-bottom: 15px; font-size: 1em; color: #333; }
+.popup-content button { background: #ff9800; border: none; border-radius: 6px; padding: 8px 16px; color: white; cursor: pointer; }
+.popup-content button:hover { background: #e68900; }
+
+.history-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.history-window {
+  width: min(100%, 680px);
+  max-height: 90vh;
+  overflow: auto;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22);
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.history-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.history-content p {
+  margin: 0;
+  color: #555;
+}
+
+.history-entry {
+  background: #fafafa;
+  border: 1px solid #eeeeee;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.history-entry-meta {
+  margin-bottom: 8px;
+  color: #666;
+  font-size: 0.92rem;
+}
+
+.history-entry-level {
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.history-entry-detail {
+  color: #444;
+  font-size: 0.95rem;
+}
+
+@keyframes popupFade {
+  from { opacity: 0; transform: translate(-50%, -60%) scale(0.9); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .skintone-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .container.full-page { padding: 12px; }
+
+  .card.full-height { padding: 18px; border-radius: 12px; }
+
+  .header .icon { font-size: 2.4em; }
+  .header h1    { font-size: 1.4em; margin: 8px 0; }
+  .header p     { font-size: 0.9em; }
+
+  .top-controls { top: 12px; right: 12px; gap: 8px; }
+
+  #navButtons { flex-wrap: wrap; }
+
+  .categories-grid { gap: 8px; margin: 14px 0; }
+  .category-item   { font-size: 0.85em; padding: 10px; }
+
+  .score-number { font-size: 2.2em; }
+}
+
+.recommendation-card {
+  background: #faf5ff;
+  border: 1px solid #ecdcf7;
+  border-left: 4px solid #7b1fa2;
+}
+
+.recommendation-tier {
+  font-size: 1.15em;
+  font-weight: 800;
+  color: #7b1fa2;
+  margin-bottom: 10px;
+}
+
+.recommendation-card p {
+  font-size: 0.85em;
+  color: #444;
+  line-height: 1.6;
+  margin: 6px 0;
+}
+
+.recommendation-card strong {
+  color: #5e1a8c;
+}
+
+/* ─────────────────────────────────────────────
+   DARK MODE: content readability fixes
+   (body.dark-mode only recolors the body text;
+   these override the card/components below it,
+   which otherwise keep their light backgrounds
+   while inheriting light text = invisible.)
+───────────────────────────────────────────── */
+body.dark-mode .container {
+  color: #e8e8ec;
+}
+
+body.dark-mode .card.full-height {
+  background: rgba(24, 26, 40, 0.97);
+  color: #e8e8ec;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+body.dark-mode .header h1,
+body.dark-mode .chapter-title,
+body.dark-mode .skintone-label,
+body.dark-mode .history-entry-level,
+body.dark-mode .info-header {
+  color: #e8e8ec;
+}
+
+body.dark-mode .header p,
+body.dark-mode .chapter-subtitle,
+body.dark-mode .chapter-label,
+body.dark-mode .info-content,
+body.dark-mode .history-content p,
+body.dark-mode .history-entry-detail,
+body.dark-mode .skintone-desc,
+body.dark-mode .recommendation-card p,
+body.dark-mode .risk-list,
+body.dark-mode .score-subtext,
+body.dark-mode .input-unit {
+  color: #c7c7d1;
+}
+
+body.dark-mode .chapter-count,
+body.dark-mode .history-entry-meta,
+body.dark-mode .result-card-title {
+  color: #9a9aa8;
+}
+
+body.dark-mode .option-column {
+  background: #23263a;
+  color: #e8e8ec;
+}
+
+body.dark-mode .option-column:hover {
+  background: #2f3350;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+body.dark-mode .option-column.selected {
+  background: #4a3417;
+  color: #ffd699;
+}
+
+body.dark-mode .category-item {
+  background: #20222f;
+  border-left-color: #383b52;
+  border-right-color: #383b52;
+  border-bottom-color: #383b52;
+  color: #e8e8ec;
+}
+
+body.dark-mode .category-item.category-sun      { background: #2a2410; border-top-color: #f5a623; }
+body.dark-mode .category-item.category-diet     { background: #182417; border-top-color: #4caf50; }
+body.dark-mode .category-item.category-symptoms { background: #191c30; border-top-color: #7c8ce0; }
+body.dark-mode .category-item.category-risk     { background: #2a1717; border-top-color: #e07a7a; }
+
+body.dark-mode .chapter-intro {
+  background: #1c1e2e;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+body.dark-mode .chapter-badge {
+  background: #2a2410;
+  color: #ffb74d;
+}
+
+body.dark-mode .info-box {
+  background: #2a2410;
+  border-left-color: #ff9800;
+}
+
+body.dark-mode .text-input {
+  background: #1c1e2e;
+  border-color: #3a3d55;
+  color: #e8e8ec;
+}
+
+body.dark-mode .text-input:focus {
+  border-color: #f5a623;
+  box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.25);
+}
+
+body.dark-mode .score-card {
+  background: #1c1e2e;
+  border-top-color: #33364a;
+  border-right-color: #33364a;
+  border-bottom-color: #33364a;
+}
+
+body.dark-mode .score-bar-track {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+body.dark-mode .score-bar-fill {
+  background: #1c1e2e;
+}
+
+body.dark-mode .serum-card {
+  background: #182234;
+  border-top-color: #2d4568;
+  border-right-color: #2d4568;
+  border-bottom-color: #2d4568;
+}
+
+body.dark-mode .serum-unit {
+  color: #b6c4dc;
+}
+
+body.dark-mode .serum-disclaimer {
+  color: #9aa8c0;
+  border-top-color: #2d4568;
+}
+
+body.dark-mode .risk-card {
+  background: #241e14;
+  border-top-color: #4a3a1c;
+  border-right-color: #4a3a1c;
+  border-bottom-color: #4a3a1c;
+}
+
+body.dark-mode .suggestion-box {
+  background: #16273a;
+  color: #d3e2f4;
+}
+
+body.dark-mode .suggestion-box h4 {
+  color: #7fb4e8;
+}
+
+body.dark-mode .recommendation-card {
+  background: #241c33;
+  border-top-color: #4a3768;
+  border-right-color: #4a3768;
+  border-bottom-color: #4a3768;
+}
+
+body.dark-mode .skintone-card {
+  background: #1c1e2e;
+  border-color: #383b52;
+}
+
+body.dark-mode .skintone-card.selected {
+  background: #2a2410;
+}
+
+body.dark-mode .skintone-swatch {
+  border-color: rgba(255,255,255,0.15);
+}
+
+body.dark-mode .popup {
+  background: #1c1e2e;
+  border-color: #ff9800;
+}
+
+body.dark-mode .popup-content p {
+  color: #e8e8ec;
+}
+
+body.dark-mode .history-window {
+  background: #1c1e2e;
+  color: #e8e8ec;
+}
+
+body.dark-mode .history-entry {
+  background: #20222f;
+  border-color: #33364a;
+}
+
+body.dark-mode .secondary-btn {
+  background: #1c1e2e;
+}
+
+/* ── Add to style.css ───────────────────────── */
+
+/* History PDF download button */
+.history-pdf-btn {
+  margin-top: 0;
+  padding: 6px 14px;
+  font-size: 0.85em;
+}
+
+/* Dark mode history entry */
+body.dark-mode .history-entry {
+  background: #252840;
+  border-color: #3a3d55;
+  color: #e8e8ec;
+}
+body.dark-mode .history-entry-meta,
+body.dark-mode .history-entry-level,
+body.dark-mode .history-entry-detail {
+  color: #ccc;
+}
