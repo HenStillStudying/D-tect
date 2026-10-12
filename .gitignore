@@ -9,10 +9,26 @@ ml/analysis/website.py
 *.ipynb
 .ipynb_checkpoints/
 
+# ── Developer-only tools ──
+lab/
+
+# ── Leftover config for an unused Firebase project ("vitamindcheck") ──
+# Already committed once: also run `git rm --cached archive/Tes.js`
+archive/Tes.js
+
 # ── Secrets ──
 .env
+.env.*
 
-# ── Python ──
+# ── Firebase CLI / emulator ──
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+*.log
+
+# ── Node / Python ──
+node_modules/
 __pycache__/
 
 # ── OS / editor ──
