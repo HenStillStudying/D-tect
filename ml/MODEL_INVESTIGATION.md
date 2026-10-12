@@ -1,6 +1,6 @@
 # Vitamin D Model Investigation
 
-**Date:** 2026-10-07 · **Updated:** 2026-10-09
+**Date:** 2026-10-07 · **Updated:** 2026-10-12
 **Status:** In progress. This records the findings so far, before any changes to the model.
 **Scope:** The Random Forest in `app/js/model/vitd_model.js`, the notebook that trained it (`ml/vitd_model_training.ipynb`), its dataset (`ml/dataset/VITAMIN D DATA FOR FCS - RISIKO.xlsx`), and how the app feeds answers into it.
 
@@ -22,7 +22,7 @@ Every major finding below follows from that:
 | Skin type has almost no effect | Only 3 people with skin type V–VI, so it can't learn it |
 | Shows e.g. "18 ng/mL" | The honest answer is "roughly 10–26" (80% range): severe to insufficient |
 
-**The algorithm isn't the problem.** Linear models, boosting, forests and simple group averages all score within about 0.3 ng/mL MAE of each other (Step A). Swapping algorithms won't fix it. The limit is the **data**: few people, mostly similar office workers, few at the extremes, and questions that don't capture what drives an individual's vitamin D.
+**The algorithm isn't the problem.** Linear models, boosting, forests and simple group averages all score within about 0.3 ng/mL MAE of each other (Step A). Swapping algorithms won't fix it. The limit is the **data**: few people, mostly similar office workers, few at the extremes, and questions that don't capture what drives an individual's vitamin D. Raw row count isn't the main issue (the learning curve is flat). The issues are a lack of variety and weak questions; see "Is it just 'not enough samples'?" (2026-10-12).
 
 **What it can honestly do:** act as a screening nudge, e.g. *"Based on your sex and lifestyle, you're probably below 20 ng/mL. Consider a blood test."* (AUC about 0.73 for "below 20"). A precise number with a dosage attached overstates what it knows.
 
@@ -166,6 +166,49 @@ Synthetic augmentation **doesn't add information**. With 107 people and weak sig
 ### Still to do
 - §3–§6 below were measured on the 111 rows. **They need re-running on the 107 real people.** The conclusions (weak signal, sex/hijab dominance, compressed predictions) are not expected to change, but the exact numbers will.
 - `ml/analysis/prep.py` replicates the notebook as it was, including the fake rows. Future experiments should keep only rows that have a `Timestamp`.
+
+---
+
+## Update — 2026-10-12: Is it just "not enough samples"?
+
+**Short answer: only partly.** The problem is low variance in the features plus weak signal, not the raw row count. Collecting more participants like the current ones would barely help.
+
+### Why the row count isn't the bottleneck
+- **The learning curve is flat (§4):** CV MAE is 5.78 at 26 rows, 5.43 at 44, 5.57 at 61 and 5.47 at 88. Doubling the data from 44 to 88 rows changed nothing. If the model were data-starved, the error would keep falling.
+- **The model isn't overfit (§4):** train MAE is 4.65 vs CV MAE 5.40. It has already extracted almost everything these questions contain. The answers explain only about 16% of the variance in vitamin D.
+- **Fake rows made it worse:** synthetic augmentation increased the error for every method tried (see the augmentation update above).
+- *Caveat:* the learning curve was measured on the 111 rows (including the 4 summary-statistic rows). It should be re-run on the 107 real people. A flat curve isn't expected to change.
+
+### Where sample variance *is* the problem
+Some features barely vary, so their effect can't be learned at any model complexity (§2):
+
+| Feature | Distribution (107 people) |
+|---|---|
+| Skin type | III = 79, V–VI = only 3 |
+| Pregnant / breastfeeding | 1 / 2 |
+| Work environment | 95 indoor vs 12 outdoor |
+| Supplements | 22 users |
+| Vitamin D ≥ 30 (Sufficient) | only 14 |
+
+Data would help here, but only **targeted** data: darker skin types, outdoor workers, supplement users and people with sufficient levels. More indoor office workers with skin type III add almost nothing.
+
+### Causes that more rows of this survey can't fix
+- **A noisy target:** one blood test reflects the season, recent sun exposure and lab variation. A questionnaire sees none of this.
+- **Coarse self-reports:** e.g. "outdoors 15–30 min" covers a wide range of real exposure, and people misremember.
+- **Missing drivers:** genetics, absorption, the supplement dose in IU, the month the blood was drawn, and actual time in the sun.
+- **Entangled answers:** sex, hijab and clothing overlap almost completely (§6), so the model can't separate their effects. "Sex" absorbs the credit.
+
+### Implications
+1. **Collecting more of the same is low value.** It won't lift the ~16% ceiling.
+2. **New data should be targeted and ask better questions:**
+   - fill in the under-represented groups
+   - add the supplement dose (IU/day), the blood-test date or month, and sun time in minutes rather than bands
+   - this needs ethics approval for new participants
+3. **The fix available today is presentation, not data:**
+   - ship a simple, physiologically sensible model (3-group means or the monotone RF)
+   - show a range or a screening result ("likely below 20 ng/mL — consider a blood test") instead of a single number
+   - don't base per-person dosage on the estimate
+4. **Expectations:** even with good data, questionnaire-based vitamin D prediction has a low ceiling. Published models of this kind are commonly cited at roughly R² 0.2–0.4. *This figure is from general knowledge and wasn't checked against sources in this investigation.* The app should present itself as a risk screener, not a measurement.
 
 ---
 
