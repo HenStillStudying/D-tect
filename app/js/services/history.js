@@ -59,44 +59,43 @@ function openHistoryWindow() {
   });
 }
 
-// Reads from the "quiz_history" collection — the same collection
-// generateAndSaveReport() writes to, keyed by the cookie-based user ID
-// from getOrCreateUserCookie(). (window.firestoreDb is used if your
-// firebase.js sets it; otherwise falls back to the plain `db` global.)
+function getDatabase() {
+  return window.firestoreDb || (typeof db !== "undefined" ? db : null);
+}
 
+// Reads this user's entries from "quiz_history". The userId filter is
+// required: Firestore rules reject any query that could return another
+// user's entries. Errors propagate so the History window shows an error
+// instead of a misleading "no history".
 function fetchUserHistory() {
-  var database = window.firestoreDb || (typeof db !== "undefined" ? db : null);
-  if (!database) return Promise.resolve([]);
+  var database = getDatabase();
+  if (!database || !window.authReady) return Promise.reject(new Error("Firebase not available"));
 
-  var userId = getOrCreateUserCookie();
-  if (!userId) return Promise.resolve([]);
-
-  return database.collection("quiz_history")
-    .where("userId", "==", userId)
-    .get()
-    .then(function(querySnapshot) {
-      var entries = querySnapshot.docs.map(function(doc) {
-        return { id: doc.id, data: doc.data() };
-      });
-
-      // Auto-delete expired entries from Firestore in the background
-      deleteExpiredEntries(entries);
-
-      // Filter out expired entries for display
-      var now = Date.now();
-      return entries.filter(function(entry) {
-        var data    = entry.data || {};
-        var savedAt = data.createdAt && data.createdAt.toDate
-          ? data.createdAt.toDate()
-          : null;
-        if (!savedAt) return false; // no timestamp = hide it
-        return (now - savedAt.getTime()) <= HISTORY_EXPIRY_MS;
-      });
-    })
-    .catch(function(error) {
-      console.warn("Could not fetch user history:", error);
-      return [];
+  return window.authReady.then(function(uid) {
+    return database.collection("quiz_history")
+      .where("userId", "==", uid)
+      .get();
+  }).then(function(querySnapshot) {
+    var entries = querySnapshot.docs.map(function(doc) {
+      return { id: doc.id, data: doc.data() };
     });
+
+    // Fallback cleanup: the Firestore TTL policy on expiresAt does the real
+    // deletion, but it can lag by a day or more, so also delete here.
+    deleteExpiredEntries(entries);
+
+    // Filter out expired entries for display
+    var now = Date.now();
+    return entries.filter(function(entry) {
+      var savedAt = entrySavedAt(entry.data || {});
+      if (!savedAt) return false; // no timestamp = hide it
+      return (now - savedAt.getTime()) <= HISTORY_EXPIRY_MS;
+    });
+  });
+}
+
+function entrySavedAt(data) {
+  return data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : null;
 }
 
 function closeHistoryWindow() {
@@ -106,16 +105,16 @@ function closeHistoryWindow() {
   }
 }
 
-// Removes expired history entries from Firestore in the background.
-// Fire-and-forget: failures are logged but don't block the History view.
+// Removes this user's expired history entries in the background (rules
+// allow deleting only your own entries). Fire-and-forget: failures are
+// logged but don't block the History view.
 function deleteExpiredEntries(entries) {
-  var database = window.firestoreDb || (typeof db !== "undefined" ? db : null);
+  var database = getDatabase();
   if (!database || !entries || entries.length === 0) return;
 
   var now = Date.now();
   entries.forEach(function(entry) {
-    var data    = entry.data || {};
-    var savedAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : null;
+    var savedAt = entrySavedAt(entry.data || {});
     if (!savedAt) return;
     if ((now - savedAt.getTime()) > HISTORY_EXPIRY_MS) {
       database.collection("quiz_history").doc(entry.id).delete().catch(function(err) {
@@ -125,50 +124,6 @@ function deleteExpiredEntries(entries) {
   });
 }
 
-function getOrCreateUserCookie() {
-  let cookieName = "vitamin_user_id=";
-  let decodedCookie = decodeURIComponent(document.cookie);
-  let ca = decodedCookie.split(';');
-  
-  // Check if cookie already exists
-  for(let i = 0; i < ca.length; i++) {
-    let c = ca[i];
-    while (c.charAt(0) == ' ') {
-      c = c.substring(1);
-    }
-    if (c.indexOf(cookieName) == 0) {
-      return c.substring(cookieName.length, c.length);
-    }
-  }
-  
-  // If not, generate a random unique ID
-  let newUserId = 'user_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  
-  // Save it for 1 year
-  let d = new Date();
-  d.setTime(d.getTime() + (365*24*60*60*1000));
-  document.cookie = cookieName + newUserId + ";" + "expires=" + d.toUTCString() + ";path=/";
-  
-  return newUserId;
-}
-
-async function saveUserReportToFirestore(userName, base64PdfString) {
-  try {
-    // 1. Get the random cookie ID
-    const userId = getOrCreateUserCookie();
-
-    // 2. Save it to Firestore using the cookie ID as the document ID
-    await db.collection("quiz_history").doc(userId).set({
-      userName: userName,       // Column 2: Name from the data
-      pdfData: base64PdfString, // Column 3: The Base64 string
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    console.log("History saved successfully for ID:", userId);
-  } catch (error) {
-    console.error("Error saving history:", error);
-  }
-}
 async function generateAndSaveReport(userName, userScore, riskLevel) {
   try {
     // Uses the SAME PDF builder as the "Download Result as PDF" button
@@ -182,23 +137,26 @@ async function generateAndSaveReport(userName, userScore, riskLevel) {
     }
 
     var base64PdfString = built.doc.output("datauristring");
-    var userId = getOrCreateUserCookie();
 
-    // Use .add() instead of .doc(userId).set() so every completed
-    // attempt creates a new history entry rather than overwriting.
-    var database = window.firestoreDb || (typeof db !== "undefined" ? db : null);
-    if (!database) {
+    var database = getDatabase();
+    if (!database || !window.authReady) {
       console.warn("Firestore not available — skipping history save.");
       return;
     }
+    var userId = await window.authReady;   // anonymous auth uid — the entry's owner
 
+    // .add() so every completed attempt creates a new history entry.
+    // Field shapes must match the create rule in firestore.rules, or the
+    // write is rejected.
     await database.collection("quiz_history").add({
-      userId: userId,           // cookie ID, used to filter "my" history
-      userName: userName,
+      userId: userId,
+      userName: String(userName).slice(0, 100),
       riskLevel: riskLevel,
       score: userScore,
       pdfData: base64PdfString,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      // A Firestore TTL policy on this field deletes the entry server-side
+      expiresAt: firebase.firestore.Timestamp.fromMillis(Date.now() + HISTORY_EXPIRY_MS)
     });
 
     console.log("New quiz attempt added to history successfully!");

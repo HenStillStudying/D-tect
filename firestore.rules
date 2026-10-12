@@ -1,0 +1,43 @@
+rules_version = '2';
+
+// Firestore Security Rules for D-tect.
+// Paste into Firebase Console → Firestore Database → Rules → Publish.
+// Must stay in sync with generateAndSaveReport() in app/js/services/history.js.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /quiz_history/{entryId} {
+
+      // Signed-in (anonymous) users can only see and delete their own entries.
+      // List queries must filter on userId == their uid, or they're rejected.
+      allow read, delete: if request.auth != null
+                          && resource.data.userId == request.auth.uid;
+
+      // New entries must belong to the writer and have exactly the app's shape.
+      allow create: if request.auth != null
+                    && request.resource.data.keys().hasOnly(
+                         ['userId', 'userName', 'riskLevel', 'score', 'pdfData', 'createdAt', 'expiresAt'])
+                    && request.resource.data.keys().hasAll(
+                         ['userId', 'userName', 'riskLevel', 'score', 'pdfData', 'createdAt', 'expiresAt'])
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.userName is string
+                    && request.resource.data.userName.size() <= 100
+                    && request.resource.data.riskLevel in ['Green', 'Yellow', 'Orange', 'Red']
+                    && request.resource.data.score is number
+                    && request.resource.data.score >= 0
+                    && request.resource.data.score <= 100
+                    && request.resource.data.pdfData is string
+                    && request.resource.data.pdfData.size() < 900000
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.expiresAt is timestamp
+                    && request.resource.data.expiresAt > request.time
+                    && request.resource.data.expiresAt <= request.time + duration.value(32, 'd');
+
+      // Entries are never edited after saving.
+      allow update: if false;
+    }
+
+    // Everything else is denied by default (no other match blocks).
+  }
+}
