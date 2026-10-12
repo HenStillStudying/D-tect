@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // Firestore Security Rules for D-tect.
-// Paste into Firebase Console → Firestore Database → Rules → Publish.
+// Deploy with: firebase deploy --only firestore:rules
 // Must stay in sync with generateAndSaveReport() in app/js/services/history.js.
 
 service cloud.firestore {
