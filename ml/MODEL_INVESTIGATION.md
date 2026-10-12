@@ -22,7 +22,7 @@ Every major finding below follows from that:
 | Skin type has almost no effect | Only 3 people with skin type V–VI, so it can't learn it |
 | Shows e.g. "18 ng/mL" | The honest answer is "roughly 10–26" (80% range): severe to insufficient |
 
-**The algorithm isn't the problem.** Linear models, boosting, forests and simple group averages all score within about 0.3 ng/mL MAE of each other (Step A). Swapping algorithms won't fix it. The limit is the **data**: few people, mostly similar office workers, few at the extremes, and questions that don't capture what drives an individual's vitamin D. Raw row count isn't the main issue (the learning curve is flat). The issues are a lack of variety and weak questions; see "Is it just 'not enough samples'?" (2026-10-12).
+**The algorithm isn't the problem.** Linear models, boosting, forests and simple group averages all score within about 0.3 ng/mL MAE of each other (Step A). Swapping algorithms won't fix it. The limit is the **data**: few people, mostly similar office workers, few at the extremes, and questions that don't capture what drives an individual's vitamin D. Raw row count isn't the main issue (the learning curve is flat). The issues are a lack of variety and weak questions; see "Is it just 'not enough samples'?" (2026-10-12). **Update 2026-10-12:** the unused supplement follow-up questions (daily, for > 1 month) lift R² from 0.22 to 0.39, the biggest gain found so far. See "The unused supplement questions".
 
 **What it can honestly do:** act as a screening nudge, e.g. *"Based on your sex and lifestyle, you're probably below 20 ng/mL. Consider a blood test."* (AUC about 0.73 for "below 20"). A precise number with a dosage attached overstates what it knows.
 
@@ -195,20 +195,85 @@ Data would help here, but only **targeted** data: darker skin types, outdoor wor
 ### Causes that more rows of this survey can't fix
 - **A noisy target:** one blood test reflects the season, recent sun exposure and lab variation. A questionnaire sees none of this.
 - **Coarse self-reports:** e.g. "outdoors 15–30 min" covers a wide range of real exposure, and people misremember.
-- **Missing drivers:** genetics, absorption, the supplement dose in IU, the month the blood was drawn, and actual time in the sun.
+- **Missing drivers:** genetics, absorption, the month the blood was drawn, and actual time in the sun. *(Correction: an earlier version listed the supplement dose here. The survey **did** ask about dose, duration and regularity (Q14–Q16); they just weren't used. See the supplement update below.)*
 - **Entangled answers:** sex, hijab and clothing overlap almost completely (§6), so the model can't separate their effects. "Sex" absorbs the credit.
 
 ### Implications
-1. **Collecting more of the same is low value.** It won't lift the ~16% ceiling.
+1. **Collecting more of the same is low value.** It won't lift the ~16% ceiling of the *current features*. Better use of the existing questions can (supplement update below: R² 0.39).
 2. **New data should be targeted and ask better questions:**
    - fill in the under-represented groups
-   - add the supplement dose (IU/day), the blood-test date or month, and sun time in minutes rather than bands
+   - ask clearly whether supplements are taken daily and for how long, plus the dose in IU, the blood-test date or month, and sun time in minutes rather than bands
    - this needs ethics approval for new participants
 3. **The fix available today is presentation, not data:**
    - ship a simple, physiologically sensible model (3-group means or the monotone RF)
    - show a range or a screening result ("likely below 20 ng/mL — consider a blood test") instead of a single number
    - don't base per-person dosage on the estimate
 4. **Expectations:** even with good data, questionnaire-based vitamin D prediction has a low ceiling. Published models of this kind are commonly cited at roughly R² 0.2–0.4. *This figure is from general knowledge and wasn't checked against sources in this investigation.* The app should present itself as a risk screener, not a measurement.
+
+---
+
+## Update — 2026-10-12: The unused supplement questions
+
+**Finding: the strongest signal in the dataset was sitting in questions the model never used.** People who take vitamin D **daily, for more than a month** have much higher levels. Adding that single yes/no to the sex + hijab groups is the biggest improvement found in this investigation.
+
+### Background
+The survey asked four supplement questions. The model only used the first:
+
+| Question | Used by model? | Answers (107 people) |
+|---|---|---|
+| Q13 Took vitamin D regularly in the last month? | ✅ yes/no | Ya 22 · Tidak 85 |
+| Q14 Dose | ❌ | 400 IU ×1 · 1000 IU ×14 · 5000 IU ×3 · other ×4 · don't know ×27 · blank ×58 |
+| Q15 How long | ❌ | <1 month ×14 · 1–6 months ×9 · 6–12 months ×4 · >1 year ×12 |
+| Q16 How regular | ❌ | not daily ×33 · daily ×8 |
+
+**The answers are inconsistent:** the follow-ups were answered by 39–49 people, but only 22 said "Ya" to Q13. For example, 27 people who said "no supplements" still chose a dose. **Only answers from Q13 = Ya are used.** That leaves 8 daily users, 13 users for > 1 month, and **7 who are both**.
+
+### Group means (raw, and relative to the person's own sex/hijab group)
+| Group | n | Mean vitamin D | vs own sex/hijab group |
+|---|---|---|---|
+| No supplement | 85 | 19.1 | −1.1 |
+| Takes, not daily / unknown | 14 | 17.8 | −0.2 |
+| **Takes, daily** | **8** | **32.7** | **+12.3** |
+| Takes, < 1 month | 8 | 15.5 | −1.9 |
+| Takes, > 1 month | 13 | 28.8 | +8.5 |
+
+Irregular or recent supplement users look **the same as non-users**. Only steady, sustained use stands out. That's consistent with vitamin D building up over weeks of regular intake. The app's single yes/no question mixes these groups together and dilutes the signal.
+
+### Cross-validated comparison
+Same 5-fold × 10-repeat splits as Step A, 107 real people. Script: `ml/analysis/supplements.py`. Output: `supplements_output.txt`.
+
+| Model | MAE | R² | Beats 3 groups |
+|---|---|---|---|
+| 3 groups (sex + hijab), previous best | 5.34 ± 0.10 | 0.224 | — |
+| + supplements yes/no (what the app uses) | 5.42 ± 0.15 | 0.256 | 3/10 |
+| + supplement level (none / not daily / daily) | 5.23 ± 0.14 | 0.323 | 9/10 |
+| + estimated IU/day | 5.38 ± 0.14 | 0.274 | 5/10 |
+| + taking > 1 month | 5.08 ± 0.14 | 0.325 | 10/10 |
+| **+ daily AND > 1 month** | **4.82 ± 0.16** | **0.393** | **10/10** |
+| RF monotone (21), yes/no | 5.40 ± 0.10 | 0.182 | 2/10 |
+| RF monotone + all supplement features | 5.34 ± 0.10 | 0.197 | 5/10 |
+
+- **The dose (IU) doesn't help.** Most people answered "don't know" or take it irregularly. *How steadily* matters more than *the label on the bottle*. The IU estimate assumes "not daily" means about 3 days a week; that's an assumption, and the feature lost anyway.
+- **The Random Forest can't use it.** With `min_samples_leaf = 8` and only 7 people in the group, no leaf can isolate them. A simple linear model can.
+- Linear effect (fitted on all 107, adjusted for sex/hijab): **+15.3 ng/mL** for daily & > 1 month, vs +5.5 for the plain yes/no.
+
+### Robustness checks
+| Check | Result |
+|---|---|
+| **Nested selection:** variant chosen by inner CV inside each training fold, so "best of 5" can't inflate the score | MAE **4.90 ± 0.19**, beats 3 groups 10/10. "Daily & > 1 month" chosen in 46 of 50 folds |
+| **Permutation test:** feature shuffled within sex/hijab groups, 200 times | Real gain 0.52 vs best shuffled 0.41, **p = 0.005** |
+| **Influence:** drop each of the 7 people in turn | Gain stays positive: 0.35 to 0.69 |
+| Median vitamin D of the 7 | 38.4 ng/mL (whole sample 18.6) |
+
+### Caveats
+- **n = 7.** The *direction* is solid. The *size* (+15 ng/mL) is very imprecise and likely overstated.
+- **Association, not proof.** Steady supplement users may differ in other ways, e.g. they may have been diagnosed as deficient before, or be more health-conscious in general.
+- The follow-up questions were answered inconsistently, so the cleaning rule (trust follow-ups only when Q13 = Ya) matters.
+
+### Implications for Step C
+1. **The app's supplement question should capture regularity and duration**, e.g. "daily for more than a month" vs "sometimes / recently started" vs "no". Today it only asks yes/no (plus "used to, but stopped"), which throws this signal away. That's an app change and needs approval.
+2. **The best candidate is now "3 groups + daily & > 1 month"**: a 4-number linear model (MAE 4.82, R² 0.39) that's simple, explainable and physiologically sensible.
+3. **It still can't support per-person dosage.** The error is about ±5 ng/mL, and the supplement effect rests on 7 people. It strengthens the screening use, e.g. "not supplementing + covered → likely below 20".
 
 ---
 
@@ -463,6 +528,7 @@ python make_readable.py real.csv "../dataset/VitD_dataset_readable.xlsx"   # rea
 python experiments.py        # Step A model comparison (~10+ min; output in step_a_output.txt)
 python export_candidates.py  # group means used by lab/model-lab.html
 python augment.py            # augmentation + monotonic-constraint experiment (~3 min; output in augment_output.txt)
+python supplements.py        # unused supplement questions Q14–Q16 + robustness checks (~2 min; output in supplements_output.txt)
 ```
 
 Requirements: pandas, numpy, scikit-learn, scipy. No `openpyxl` is needed.

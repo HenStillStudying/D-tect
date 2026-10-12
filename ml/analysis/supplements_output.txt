@@ -1,0 +1,41 @@
+﻿N = 107 | Q13 yes = 22
+  Q14 dose: answered by 49 people, of whom 27 said NO to Q13
+  Q15 how long: answered by 39 people, of whom 18 said NO to Q13
+  Q16 how regular: answered by 41 people, of whom 19 said NO to Q13
+  -> follow-ups are used only when Q13 = Ya; answers from Q13 = Tidak are ignored
+
+Group                         n   mean VitD   vs own sex/hijab group
+  No supplement                85     19.1       -1.1
+  Takes, not daily / unknown   14     17.8       -0.2
+  Takes, daily                  8     32.7      +12.3
+  Takes, < 1 month              8     15.5       -1.9
+  Takes, > 1 month             13     28.8       +8.5
+  Dose 1000 IU                 12     20.4       +4.1
+  Dose 5000 IU                  3     34.2      +10.1
+  Dose don't know               5     22.4       +1.2
+
+N = 107 | 5-fold x 10 (Step A splits) | 'beats 3 groups' = repeats with lower MAE
+Model                                        MAE      R²  beats 3 groups
+3 groups                            5.34 ± 0.10   0.224   0/10
+3 groups + supp yes/no              5.42 ± 0.15   0.256   3/10
+3 groups + supp level               5.23 ± 0.14   0.323   9/10
+3 groups + log IU/day               5.38 ± 0.14   0.274   5/10
+3 groups + supp >1 month            5.08 ± 0.14   0.325  10/10
+3 groups + daily & >1 month         4.82 ± 0.16   0.393  10/10
+RF monotone (21), yes/no            5.40 ± 0.10   0.182   2/10
+RF monotone, supp level             5.40 ± 0.10   0.182   2/10
+RF monotone, log IU/day             5.39 ± 0.10   0.186   3/10
+RF monotone, all supp features      5.34 ± 0.10   0.197   5/10
+
+Linear coefficient (ng/mL), fitted on all 107 with sex + hijab:
+  Supplements              +5.52  (yes vs no)   n with feature > 0: 22
+  Supp level               +5.18  (per step)   n with feature > 0: 22
+  Supp log IU/day          +0.94  (per log-unit)   n with feature > 0: 22
+  Supp >1 month            +9.65  (yes vs no)   n with feature > 0: 13
+  Supp daily & >1 month    +15.32  (yes vs no)   n with feature > 0: 7
+
+(a) Nested (variant picked inside each training fold): MAE 4.90 ± 0.19, beats 3 groups 10/10
+    variant chosen: {'Supp daily & >1 month': 46, 'Supp >1 month': 4}
+(b) Permutation test for 'Supp daily & >1 month': real MAE gain 0.52; shuffled gains max 0.41, p = 0.005
+(c) Leave-one-supplement-user-out: MAE gain ranges 0.35 to 0.69 (n = 7)
+    median vitamin D of the 'Supp daily & >1 month' group: 38.4 (whole sample 18.6)
