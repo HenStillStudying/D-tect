@@ -1,6 +1,6 @@
 # Vitamin D Model Investigation
 
-**Date:** 2026-10-07 · **Updated:** 2026-10-12
+**Date:** 2026-10-07 · **Updated:** 2026-10-13
 **Status:** In progress. This records the findings so far, before any changes to the model.
 **Scope:** The Random Forest in `app/js/model/vitd_model.js`, the notebook that trained it (`ml/vitd_model_training.ipynb`), its dataset (`ml/dataset/VITAMIN D DATA FOR FCS - RISIKO.xlsx`), and how the app feeds answers into it.
 
@@ -274,6 +274,68 @@ Same 5-fold × 10-repeat splits as Step A, 107 real people. Script: `ml/analysis
 1. **The app's supplement question should capture regularity and duration**, e.g. "daily for more than a month" vs "sometimes / recently started" vs "no". Today it only asks yes/no (plus "used to, but stopped"), which throws this signal away. That's an app change and needs approval.
 2. **The best candidate is now "3 groups + daily & > 1 month"**: a 4-number linear model (MAE 4.82, R² 0.39) that's simple, explainable and physiologically sensible.
 3. **It still can't support per-person dosage.** The error is about ±5 ng/mL, and the supplement effect rests on 7 people. It strengthens the screening use, e.g. "not supplementing + covered → likely below 20".
+
+---
+
+## Update — 2026-10-13: Step C proposal (draft, awaiting team feedback)
+
+A proposal was written up for the team: "D-tect Model Proposal" (private claude.ai page, https://claude.ai/artifact/GE6prt2eJizn3CBDRGwtBf; it has to be shared before others can open it). **Nothing in the app has changed yet.** Summary:
+
+### Purpose
+Make the estimate more accurate, explainable, and honest about its uncertainty, so D-tect works as a screening tool ("you're probably low, consider a blood test") rather than a fake-precise measurement.
+
+### Proposed model
+**Multiple linear regression** (OLS, scikit-learn `LinearRegression`) with three yes/no inputs, fitted on the 107 real participants (`export_candidates.py`):
+
+```
+vitamin D = 22.9 − 4.7·female − 4.8·hijab + 15.3·(vitamin D daily for > 1 month)    ± 7.7 (80% range)
+```
+
+- **Performance:** MAE 4.82, R² 0.39, beats sex-only 10/10. The nested-selection estimate is MAE 4.90.
+- **Comparison:** the current Random Forest scores MAE 5.55, R² 0.14.
+- **Why it beats the RF:** 107 people is too few for a Random Forest. It fits noise in small groups, and its `min_samples_leaf = 8` can't isolate the 7 daily users.
+- **Assumptions and range:** the effects are assumed to be additive (the supplement effect is the same for men and women). The range is empirical: the 80th percentile of the cross-validated absolute errors.
+
+### What it fixes
+| Problem today | Proposal |
+|---|---|
+| The RF loses to sex-only in 9 of 10 runs | Beats sex-only in 10 of 10 |
+| The RF can never say "Sufficient" (max 27.9) | Reaches Sufficient for daily supplement users |
+| The RF's best case prefers dark full coverage and SPF 50+ | Every input moves the estimate in the physiological direction |
+| The survey's supplement regularity/duration answers were never used | Added to the app and used |
+| A single exact number is shown | A range plus a screening message |
+| Dosage advice is picked from that number | Advice based on the risk tier, plus "take it daily, confirm with a blood test" |
+| App ↔ training encoding mismatches (§8) | Only affect the RF, so they disappear with it |
+
+### Key points the proposal explains
+- **The original model is practically sex-only.**
+  - Permutation importance: sex +1.32, age +0.24, BMI +0.12, everything else ≈ 0 (§6.2).
+  - Without sex it is worse than the mean.
+  - Age is mostly sex in disguise (§6.6).
+  - Sex itself stands in for hijab, sunscreen and outdoor work (§6.3–6.4).
+- **Only three inputs, because of the dataset.** Sun, skin type, BMI and diet matter biologically, but this sample can't show it (low variety, coarse answers, entangled with sex/hijab). Adding every column didn't help beyond noise.
+- **No questions are removed.** The other questions keep driving the rule-based risk score and the personal advice, and they would be needed for a future, larger dataset. The *number* uses what the data confirms; the *risk score and advice* use established knowledge.
+
+### Plan (each step approved and tested before the next)
+1. **Add two questions** (EN + ID):
+   - a supplement follow-up (daily > 1 month / daily, recently started / not daily)
+   - a covering question (wording undecided)
+2. **Swap `predictVitaminD`** for the linear model. Keep the RF in `archive/` and in the write-up.
+3. **Show a range and a screening message** in results and in the PDF.
+4. **Rework the dosage advice** so it no longer depends on a precise number.
+5. **Test in the Model Lab, update the docs, then deploy.**
+
+### Open questions for the team
+- **Hijab wording:** ask about the hijab directly, or use a softer "do you usually cover your hair and arms outdoors?". The softer wording is an approximation of what the survey asked.
+- **Dropping the RF from the app:** proposed to keep it in the write-up as "tested, and a simpler model won".
+- **Presentation:** range, screening message, or both. The proposal leans toward both, with the message first.
+- **Review:** someone with a health background should review the dosage wording.
+
+### Limits restated in the proposal
+- The supplement effect rests on 7 people; its size is uncertain and probably overstated.
+- The supplement effect is an association, not proof of cause.
+- The ±7.7 range is fine for screening, not for personal dosing.
+- More data of the same kind won't help; more variety would, and new participants need ethics approval.
 
 ---
 
