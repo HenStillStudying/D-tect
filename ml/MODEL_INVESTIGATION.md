@@ -337,6 +337,90 @@ vitamin D = 22.9 − 4.7·female − 4.8·hijab + 15.3·(vitamin D daily for > 1
 - The ±7.7 range is fine for screening, not for personal dosing.
 - More data of the same kind won't help; more variety would, and new participants need ethics approval.
 
+## Update — 2026-10-13: Step C implementation plan (draft, not approved)
+
+This is the detailed version of the proposal's 5-step plan, based on the current app code. **Nothing has been implemented.** Each step needs the project owner's approval, and is tested and shown before the next one starts. The work happens on a new branch.
+
+### How the estimate is wired today
+- `calculateScore()` (`app/js/core/scoring.js`) computes the rule-based **risk score** from all answers. It also calls the RF (`predictVitaminD`) and rounds the result into `estimatedNgMl`. If the model fails to load, it falls back to `48·exp(−0.028·score)`.
+- That single number drives four things:
+  - the serum card (`app/js/ui/results.js`)
+  - the serum flag (tiers 30/20/12)
+  - the dosage advice: `getDosageRecommendation(estimatedNgMl)`, used in `results.js` and `app/js/services/pdf-export.js`
+  - the PDF
+- Questions live in `app/js/data/data.en.js` and `data.id.js`. Show/hide logic lives in `CONDITIONAL_QUESTIONS` (`app/js/core/state.js`).
+- History saves only the risk level and score, never the estimate. **The Firestore rules and history are not affected.**
+
+### Step 1: add two questions (EN + ID)
+| Key | Position | Shown when | Options |
+|---|---|---|---|
+| `covering` | Chapter 1, after sex | sex = Female | A. Yes, usually · B. No |
+| `supplementPattern` | Chapter 2, after supplements | supplements = A or B | A. Every day, for more than a month · B. Every day, started less than a month ago · C. Not every day |
+
+- **Files:** `data.en.js`, `data.id.js`, `state.js` (2 new conditional rules).
+- **`covering` wording is a placeholder** until the team decides: "Do you usually cover your hair and arms when outdoors?"
+- **The risk score is unchanged.** `MAX_RAW = 56` stays as it is.
+
+### Step 2: swap the model
+- **New file `app/js/model/vitd_estimate.js`:**
+  - holds the four constants exported by `export_candidates.py`, plus `range80`
+  - exposes `estimateVitaminD(answers)`, which returns `{ value, low, high }`, with `low` clamped at 0
+- **Change to `calculateScore()`:** it calls `estimateVitaminD` instead of `predictVitaminD`, and the exponential fallback is removed.
+- **The RF is archived:** `vitd_model.js` and `buildModelFeatures` move to `archive/`, and the `<script>` tag is removed from `app/index.html`.
+- **Effect on the §8 encoding mismatches:**
+  - Rec Freq, the hidden body part, and Shade "E" only fed the RF, so they disappear.
+  - "D. I used to, but stopped" remains. It is treated as **not** taking supplements.
+
+### Step 3: show a range and a screening message
+```
+Before:  18 ng/mL
+         Deficiency (<20 ng/mL)
+
+After:   Likely below 20 ng/mL (deficient)
+         Estimated range: 10 – 26 ng/mL
+         A 25(OH)D blood test is the only way to know your actual level.
+```
+- **Headline:** taken from the estimate's tier (likely below 12 / likely below 20 / around 20–30 / likely 30+).
+- **Range:** estimate ± 7.7. The ng/mL ↔ nmol/L toggle converts both ends.
+- **Disclaimer:** adds that the estimate is based on 107 participants and accurate to about ±8 ng/mL.
+- **Files:** `results.js`, `pdf-export.js`, `i18n.js`, and a small CSS change.
+
+### Step 4: rework the dosage advice
+- **What picks the advice:** `getDosageRecommendation` uses the **risk level** (Green/Yellow/Orange/Red) instead of the estimate.
+- **Every tier** says to confirm with a blood test before taking high doses.
+- **New tip for non-daily users** (takes supplements, but not daily): "In our data, only daily, sustained use made a difference."
+- **Dose numbers are not rewritten without a health-background review.** The existing ranges stay, and only what selects them changes.
+- **Proposed change for Red (needs a decision):** soften the "5000 IU/day" line to "see a doctor for a blood test and dosing", because recommending that dose from a questionnaire is risky.
+- **Files:** `scoring.js`, `i18n.js`, `results.js`.
+
+### Step 5: test
+- **Node check script:** `estimateVitaminD` must match the Python model on all six combinations (man / woman / woman + hijab × daily-long or not), within 0.1.
+- **Model Lab:** switched to load the real `vitd_estimate.js`, so the lab and the app can't disagree.
+- **`test-fills.js`:** gets the new keys, so the best/worst/random presets keep working.
+- **Manual pass:**
+  - EN and ID
+  - a man (covering hidden)
+  - supplements "No" (follow-up hidden)
+  - dark mode
+  - PDF download
+  - history
+  - resuming old saved progress: it should just ask the two new questions
+
+### Step 6: docs and deploy
+- **Docs:** update the README, this report ("Step C shipped"), and the proposal page.
+- **Release:** commit on the branch, merge to `main` after approval, then `firebase deploy --only hosting`. The rules are untouched.
+
+### Defaults if the team doesn't answer
+| Open question | Default |
+|---|---|
+| Hijab vs. soft "covering" wording | Soft wording |
+| Remove the RF from the app | Yes, archived and kept in this write-up |
+| Range, message, or both | Both, with the message first |
+| "5000 IU/day" for Red | Softened to "see a doctor", pending a health review |
+
+### Known side effect
+The **risk score** (all questions, rule-based) and the **estimate** (3 inputs, data-based) can disagree. For example, a woman wearing a hijab who gets a lot of sun may score Green on risk but get "likely below 20" as her estimate. They measure different things. If this confuses users, a one-line explanation can be added to the results.
+
 ---
 
 ## TL;DR
