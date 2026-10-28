@@ -1,10 +1,102 @@
-// ─────────────────────────────────────────────
-//  history.js — Firestore history: save reports, list, download, expire
-// ─────────────────────────────────────────────
+var USER_ID_STORAGE_KEY = "vitd_anonymous_user_id_v1";
+var HISTORY_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-// How long a saved history entry stays visible/kept before it's treated
-// as expired and cleaned up. 30 days.
-var HISTORY_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000;
+function generateUUID() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0;
+    var v = c === "x" ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+// Fix: Use localStorage instead of cookies for reliable tracking
+function getUserId() {
+  try {
+    var id = localStorage.getItem(USER_ID_STORAGE_KEY);
+    if (id) return id;
+    id = generateUUID();
+    localStorage.setItem(USER_ID_STORAGE_KEY, id);
+    return id;
+  } catch (e) {
+    console.warn("Unable to read/write user UUID:", e);
+    return null;
+  }
+}
+
+// CSV Generator for individual reports
+function generateCsvReport(userName, userScore, riskLevel, estimatedNgMl) {
+  var a = state.answers;
+  var csvRows = [
+    "Metric,Value",
+    "Name,\"" + (userName || "Anonymous") + "\"",
+    "Age," + (a.age || ""),
+    "Sex,\"" + (a.sex || "") + "\"",
+    "BMI," + (a.bmi || ""),
+    "Risk Score," + userScore,
+    "Risk Level,\"" + riskLevel + "\"",
+    "Estimated Serum Level (ng/mL)," + estimatedNgMl,
+    "Date,\"" + new Date().toISOString() + "\""
+  ];
+  return "data:text/csv;charset=utf-8," + encodeURIComponent(csvRows.join("\n"));
+}
+
+// Save PDF, CSV, and Raw Answers for research
+async function generateAndSaveReport(userName, userScore, riskLevel, estimatedNgMl) {
+  try {
+    var built = (typeof buildResultPDF === "function") ? buildResultPDF() : null;
+    if (!built) return;
+
+    var base64PdfString = built.doc.output("datauristring");
+    var csvDataUri = generateCsvReport(userName, userScore, riskLevel, estimatedNgMl);
+    var userId = getUserId();
+    var database = window.firestoreDb || (typeof db !== "undefined" ? db : null);
+    if (!database) return;
+
+    var expirationDate = new Date(Date.now() + HISTORY_EXPIRY_MS);
+
+    await database.collection("quiz_history").add({
+      userId: userId,
+      userName: userName,
+      riskLevel: riskLevel,
+      score: userScore,
+      pdfData: base64PdfString,
+      csvData: csvDataUri,
+      rawAnswers: state.answers, // Store all answers for the master research CSV
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      expiresAt: firebase.firestore.Timestamp.fromDate(expirationDate)
+    });
+  } catch (error) {
+    console.error("Error saving report:", error);
+  }
+}
+
+// Load user's private history
+function fetchUserHistory() {
+  var database = window.firestoreDb || (typeof db !== "undefined" ? db : null);
+  if (!database) return Promise.resolve([]);
+
+  var userId = getUserId();
+  if (!userId) return Promise.resolve([]);
+
+  return database.collection("quiz_history")
+    .where("userId", "==", userId)
+    .get()
+    .then(function(querySnapshot) {
+      var entries = querySnapshot.docs.map(function(doc) {
+        return { id: doc.id, data: doc.data() };
+      });
+      
+      var now = Date.now();
+      return entries.filter(function(entry) {
+        var savedAt = entry.data.createdAt && entry.data.createdAt.toDate ? entry.data.createdAt.toDate() : null;
+        return savedAt && (now - savedAt.getTime()) <= HISTORY_EXPIRY_MS;
+      });
+    })
+    .catch(function(error) {
+      console.warn("Could not fetch user history:", error);
+      return [];
+    });
+}
 
 function openHistoryWindow() {
   var overlay = document.getElementById("historyOverlay");
@@ -14,190 +106,120 @@ function openHistoryWindow() {
     overlay.className = "history-overlay hidden";
     overlay.innerHTML =
       '<div class="history-window">' +
-        '<div class="history-header">' +
-          '<h3 id="historyTitle"></h3>' +
-          '<button id="closeHistoryBtn" class="secondary-btn"></button>' +
-        '</div>' +
+        '<div class="history-header"><h3>History</h3><button id="closeHistoryBtn" class="secondary-btn">Close</button></div>' +
         '<div id="historyContent" class="history-content"></div>' +
       '</div>';
     document.body.appendChild(overlay);
-    overlay.querySelector("#closeHistoryBtn").onclick = closeHistoryWindow;
-    overlay.onclick = function(event) {
-      if (event.target === overlay) closeHistoryWindow();
-    };
+    overlay.querySelector("#closeHistoryBtn").onclick = function() { overlay.classList.add("hidden"); };
   }
-
-  // Set every open, since the language may have changed since it was built
-  var ui = getUI();
-  overlay.querySelector("#historyTitle").textContent    = ui.historyTitle;
-  overlay.querySelector("#closeHistoryBtn").textContent = ui.historyClose;
 
   overlay.classList.remove("hidden");
   var content = overlay.querySelector("#historyContent");
-  if (content) {
-    content.innerHTML = '<p>' + ui.historyLoading + '</p>';
-  }
+  if (content) content.innerHTML = '<p>Loading history...</p>';
 
   fetchUserHistory().then(function(entries) {
     if (!content) return;
     if (!entries || entries.length === 0) {
-      content.innerHTML = '<p>' + getUI().historyEmpty + '</p>';
+      content.innerHTML = '<p>No saved history yet.</p>';
       return;
     }
-    content.innerHTML = entries.map(formatHistoryItem).join("");
-    content.onclick = function(event) {
-      var btn = event.target.closest("[data-history-index]");
-      if (!btn) return;
-      var data = entries[parseInt(btn.getAttribute("data-history-index"), 10)].data || {};
-      if (!isPdfDataUri(data.pdfData)) return;
-      var safeName = String(data.userName || "Anonymous").replace(/[^\w\-]+/g, "_");
-      downloadPdfFromBase64(data.pdfData, "VitaminD_Report_" + safeName + ".pdf");
-    };
-  }).catch(function(err) {
-    console.error("Failed to load history entries:", err);
-    if (content) content.innerHTML = '<p>' + getUI().historyError + '</p>';
+    
+    window.tempHistoryPdfs = {};
+    content.innerHTML = entries.map(function(entry) {
+      if (entry.data && entry.data.pdfData) {
+        window.tempHistoryPdfs[entry.id] = entry.data.pdfData;
+      }
+      return formatHistoryItem(entry);
+    }).join("");
   });
 }
 
-function getDatabase() {
-  return window.firestoreDb || (typeof db !== "undefined" ? db : null);
-}
-
-// Reads this user's entries from "quiz_history". The userId filter is
-// required: Firestore rules reject any query that could return another
-// user's entries. Errors propagate so the History window shows an error
-// instead of a misleading "no history".
-function fetchUserHistory() {
-  var database = getDatabase();
-  if (!database || !window.authReady) return Promise.reject(new Error("Firebase not available"));
-
-  return window.authReady.then(function(uid) {
-    return database.collection("quiz_history")
-      .where("userId", "==", uid)
-      .get();
-  }).then(function(querySnapshot) {
-    var entries = querySnapshot.docs.map(function(doc) {
-      return { id: doc.id, data: doc.data() };
-    });
-
-    // Fallback cleanup: the Firestore TTL policy on expiresAt does the real
-    // deletion, but it can lag by a day or more, so also delete here.
-    deleteExpiredEntries(entries);
-
-    // Filter out expired entries for display
-    var now = Date.now();
-    return entries.filter(function(entry) {
-      var savedAt = entrySavedAt(entry.data || {});
-      if (!savedAt) return false; // no timestamp = hide it
-      return (now - savedAt.getTime()) <= HISTORY_EXPIRY_MS;
-    });
-  });
-}
-
-function entrySavedAt(data) {
-  return data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : null;
-}
-
-function closeHistoryWindow() {
-  var overlay = document.getElementById("historyOverlay");
-  if (overlay) {
-    overlay.classList.add("hidden");
+function downloadPdfById(entryId, filename) {
+  var base64String = window.tempHistoryPdfs && window.tempHistoryPdfs[entryId];
+  if (base64String) {
+    var link = document.createElement('a');
+    link.href = base64String;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 }
 
-// Removes this user's expired history entries in the background (rules
-// allow deleting only your own entries). Fire-and-forget: failures are
-// logged but don't block the History view.
-function deleteExpiredEntries(entries) {
-  var database = getDatabase();
-  if (!database || !entries || entries.length === 0) return;
-
-  var now = Date.now();
-  entries.forEach(function(entry) {
-    var savedAt = entrySavedAt(entry.data || {});
-    if (!savedAt) return;
-    if ((now - savedAt.getTime()) > HISTORY_EXPIRY_MS) {
-      database.collection("quiz_history").doc(entry.id).delete().catch(function(err) {
-        console.warn("Failed to delete expired history entry:", entry.id, err);
-      });
-    }
-  });
-}
-
-async function generateAndSaveReport(userName, userScore, riskLevel) {
-  try {
-    // Uses the SAME PDF builder as the "Download Result as PDF" button
-    // on the result screen (defined in pdf-export.js), so the copy
-    // saved to history is identical to what the user can download
-    // directly — same header, sections, colors, and content.
-    var built = (typeof buildResultPDF === "function") ? buildResultPDF() : null;
-    if (!built) {
-      console.warn("PDF library not ready yet — skipping history save for this attempt.");
-      return;
-    }
-
-    var base64PdfString = built.doc.output("datauristring");
-
-    var database = getDatabase();
-    if (!database || !window.authReady) {
-      console.warn("Firestore not available — skipping history save.");
-      return;
-    }
-    var userId = await window.authReady;   // anonymous auth uid — the entry's owner
-
-    // .add() so every completed attempt creates a new history entry.
-    // Field shapes must match the create rule in firestore.rules, or the
-    // write is rejected.
-    await database.collection("quiz_history").add({
-      userId: userId,
-      userName: String(userName).slice(0, 100),
-      riskLevel: riskLevel,
-      score: userScore,
-      pdfData: base64PdfString,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      // A Firestore TTL policy on this field deletes the entry server-side
-      expiresAt: firebase.firestore.Timestamp.fromMillis(Date.now() + HISTORY_EXPIRY_MS)
-    });
-
-    console.log("New quiz attempt added to history successfully!");
-  } catch (error) {
-    console.error("Error saving report:", error);
-  }
-}
-
-function downloadPdfFromBase64(base64String, filename = "Vitamin_D_Report.pdf") {
-  // 1. Create a temporary hidden anchor tag in the document
-  var link = document.createElement('a');
-  link.href = base64String;
-  link.download = filename;
+// User UI only shows PDF download
+function formatHistoryItem(entry) {
+  var data = entry.data || {};
+  var entryId = entry.id;
+  var savedAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+  var nameLabel = data.userName || "Anonymous";
   
-  // 2. Append it to the body, click it programmatically, then remove it
+  return '<div class="history-entry" style="padding: 15px; border-bottom: 1px solid #ddd; margin-bottom: 10px;">' +
+    '<div class="history-entry-meta"><strong>Name:</strong> ' + nameLabel + '</div>' +
+    '<div class="history-entry-level"><strong>Risk Level:</strong> ' + (data.riskLevel || "-") + '</div>' +
+    '<div class="history-entry-detail"><strong>Date:</strong> ' + savedAt.toLocaleString() + '</div>' +
+    (data.pdfData ? '<button class="download-btn" style="margin-top: 10px; padding: 5px 10px;" onclick="downloadPdfById(\'' + entryId + '\', \'VitaminD_Report_' + nameLabel.replace(/\s+/g, '_') + '.pdf\')">📥 Download PDF</button>' : '') +
+  '</div>';
+}
+
+// Admin: Master CSV Exporter for Research
+async function downloadMasterCSV() {
+  var database = window.firestoreDb || (typeof db !== "undefined" ? db : null);
+  if (!database) { alert("Database not connected."); return; }
+
+  var snapshot = await database.collection("quiz_history").orderBy("createdAt", "desc").get();
+  var sep = ";"; 
+  var headers = ["No. Registrasi", "Nama", "Risk Level", "Risk Score", "Tanggal Dikirim"];
+  
+  var allQuestions = [];
+  chaptersEN.forEach(function(ch) {
+    ch.questions.forEach(function(q) {
+      allQuestions.push(q);
+      headers.push('"' + q.key.replace(/"/g, '""') + '"');
+    });
+  });
+
+  var csvRows = [headers.join(sep)];
+
+  snapshot.forEach(function(doc) {
+    var d = doc.data();
+    var ans = d.rawAnswers || {};
+    var dateStr = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toLocaleString() : "";
+    
+    var row = [
+      doc.id,
+      '"' + (d.userName || "Anonymous") + '"',
+      '"' + (d.riskLevel || "") + '"',
+      d.score || 0,
+      '"' + dateStr + '"'
+    ];
+
+    allQuestions.forEach(function(q) {
+      var val = ans[q.key];
+      row.push(val === undefined || val === null ? '""' : '"' + String(val).replace(/"/g, '""') + '"');
+    });
+
+    csvRows.push(row.join(sep));
+  });
+
+  var csvString = "\uFEFF" + csvRows.join("\n");
+  var link = document.createElement('a');
+  link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csvString);
+  link.download = "Master_Research_Data.csv";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 }
 
-// Only data URIs that are actually PDFs are offered for download — the
-// field comes from Firestore, so it isn't trusted to be what we wrote.
-function isPdfDataUri(str) {
-  return typeof str === "string" && str.indexOf("data:application/pdf") === 0;
-}
-
-function formatHistoryItem(entry, index) {
-  var data = entry.data || {};
-  var ui   = getUI();
-
-  var savedAt = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
-  var dateLabel = savedAt.toLocaleString();
-  var nameLabel = data.userName || "Anonymous";
-  var levelLabel = data.riskLevel || "-";
-
-  // The PDF itself is NOT embedded in the markup; the button carries only
-  // the entry index and the click handler in openHistoryWindow() looks it up.
-  return '<div class="history-entry" style="padding: 15px; border-bottom: 1px solid #ddd; margin-bottom: 10px;">' +
-    '<div class="history-entry-meta"><strong>' + ui.historyName + '</strong> ' + escapeHtml(nameLabel) + '</div>' +
-    '<div class="history-entry-level"><strong>' + ui.historyRiskLevel + '</strong> ' + escapeHtml(levelLabel) + '</div>' +
-    '<div class="history-entry-detail"><strong>' + ui.historyDate + '</strong> ' + escapeHtml(dateLabel) + '</div>' +
-    (isPdfDataUri(data.pdfData) ? '<button class="download-btn" data-history-index="' + index + '" style="margin-top: 10px; padding: 5px 10px;">📥 ' + ui.historyDownload + '</button>' : '') +
-  '</div>';
-}
+// Secret Admin Shortcut (Ctrl + Shift + E)
+document.addEventListener('keydown', function(event) {
+  if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'e') {
+    event.preventDefault();
+    var passcode = prompt("Admin Access: Enter export password:");
+    if (passcode === "dtect-admin-2026") {
+      console.log("Admin authenticated. Generating Master CSV...");
+      downloadMasterCSV();
+    } else if (passcode !== null) {
+      alert("Incorrect password. Access denied.");
+    }
+  }
+});
