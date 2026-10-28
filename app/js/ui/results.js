@@ -14,6 +14,7 @@ function setSerumUnit(unit) {
   if (state.uiState === "result") showResult(true);
 }
 
+// Inside app/js/ui/results.js
 function showResult(skipSave) {
   var result = calculateScore();
   var rl     = getResultLabels();
@@ -24,8 +25,12 @@ function showResult(skipSave) {
     saveProgress();
 
     var userName = state.answers["Name"] || "Anonymous User";
-    generateAndSaveReport(userName, result.score, result.level);
+    
+    // UPDATE THIS LINE: Pass result.estimatedNgMl as the 4th argument
+    generateAndSaveReport(userName, result.score, result.level, result.estimatedNgMl);
   }
+
+  // ... (rest of your showResult code stays exactly the same)
 
   dom.quiz.classList.add("hidden");
   dom.quiz.innerHTML          = "";
