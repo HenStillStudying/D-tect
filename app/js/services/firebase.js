@@ -1,13 +1,4 @@
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyBQFbIPuXWP9JuOmJ-beEjYowtcvZEJrlc",
-  authDomain: "vitamindeficiency-ae82f.firebaseapp.com",
-  projectId: "vitamindeficiency-ae82f",
-  storageBucket: "vitamindeficiency-ae82f.firebasestorage.app",
-  messagingSenderId: "636315539699",
-  appId: "1:636315539699:web:1ce574029ba2680181ff86",
-  measurementId: "G-Q1TTDQ57GF"
-};
+// firebaseConfig comes from firebase-config.js
 
 // Initialize Firebase using the CDN "compat" method
 firebase.initializeApp(firebaseConfig);

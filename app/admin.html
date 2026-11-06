@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Not linked from the app. Access is enforced by firestore.rules, not by hiding this page. -->
+  <meta name="robots" content="noindex, nofollow">
+  <title>D-tect Admin</title>
+  <style>
+    :root {
+      --bg: #f4f6f9; --card: #fff; --text: #1f2430; --muted: #667085;
+      --border: #e3e7ee; --accent: #fb8c00; --accent-text: #fff;
+      --ok: #2e7d32; --err: #c62828;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #14161f; --card: #1d2030; --text: #e8e8ec; --muted: #9a9aa8;
+        --border: #2c3044; --accent: #ffa726; --accent-text: #1a1206;
+        --ok: #81c784; --err: #ef9a9a;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 32px 16px; background: var(--bg); color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5;
+    }
+    .card {
+      max-width: 560px; margin: 0 auto; background: var(--card);
+      border: 1px solid var(--border); border-radius: 12px; padding: 24px;
+    }
+    h1 { font-size: 1.3em; margin: 0 0 4px; }
+    .sub { color: var(--muted); margin: 0 0 20px; font-size: 0.9em; }
+    button, select { font: inherit; }
+    .btn {
+      padding: 10px 18px; border-radius: 8px; border: 1px solid var(--accent);
+      background: var(--accent); color: var(--accent-text); font-weight: 600; cursor: pointer;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-plain { background: transparent; color: var(--text); border-color: var(--border); }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 16px 0 4px; }
+    .stat { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+    .stat b { display: block; font-size: 1.3em; }
+    .stat span { color: var(--muted); font-size: 0.8em; }
+    .who { color: var(--muted); font-size: 0.85em; }
+    .msg { margin-top: 14px; font-size: 0.9em; }
+    .msg.err { color: var(--err); }
+    .msg.ok { color: var(--ok); }
+    code { word-break: break-all; background: var(--bg); padding: 2px 6px; border-radius: 4px; }
+    label { font-size: 0.9em; }
+    select { padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>D-tect research data</h1>
+    <p class="sub">Responses that participants chose to share, without their names.</p>
+
+    <!-- Signed out -->
+    <div id="viewSignedOut" class="hidden">
+      <p>Sign in with the Google account that was registered as an admin.</p>
+      <button id="signInBtn" class="btn">Sign in with Google</button>
+    </div>
+
+    <!-- Signed in, not an admin -->
+    <div id="viewDenied" class="hidden">
+      <p><strong>This account is not an admin.</strong></p>
+      <p class="who">Signed in as <span id="deniedEmail"></span>.<br>
+        To get access, send this ID to the project owner:<br><code id="deniedUid"></code></p>
+      <div class="row"><button class="btn btn-plain sign-out">Sign out</button></div>
+    </div>
+
+    <!-- Admin -->
+    <div id="viewAdmin" class="hidden">
+      <p class="who">Signed in as <span id="adminEmail"></span></p>
+      <div class="stats">
+        <div class="stat"><b id="statCount">–</b><span>responses</span></div>
+        <div class="stat"><b id="statFirst">–</b><span>first</span></div>
+        <div class="stat"><b id="statLast">–</b><span>latest</span></div>
+      </div>
+      <div class="row">
+        <label for="csvLang">CSV language</label>
+        <select id="csvLang">
+          <option value="en">English</option>
+          <option value="id">Bahasa Indonesia</option>
+        </select>
+      </div>
+      <div class="row">
+        <button id="downloadBtn" class="btn" disabled>Download CSV</button>
+        <button id="refreshBtn" class="btn btn-plain">Refresh</button>
+        <button class="btn btn-plain sign-out">Sign out</button>
+      </div>
+    </div>
+
+    <p id="msg" class="msg"></p>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="js/services/firebase-config.js"></script>
+  <script src="js/data/data.en.js"></script>
+  <script src="js/data/data.id.js"></script>
+  <script src="js/admin/admin.js"></script>
+</body>
+</html>

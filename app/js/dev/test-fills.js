@@ -58,6 +58,7 @@ function randomFill() {
   state.currentChapter       = allChapters.length;
   state.currentQuestionIndex = 0;
   state.uiState              = "result";
+  state.isTestRun            = true;
 
   showResult(true); // true = skipSave so it doesn't write test data to Firebase
 }
@@ -148,6 +149,7 @@ function worstCaseRun() {
   state.currentChapter       = allChapters.length;
   state.currentQuestionIndex = 0;
   state.uiState              = "result";
+  state.isTestRun            = true;
 
   showResult(true);
 }
@@ -240,6 +242,7 @@ function bestCaseRun() {
   state.currentChapter       = allChapters.length;
   state.currentQuestionIndex = 0;
   state.uiState              = "result";
+  state.isTestRun            = true;
 
   showResult(true);
 }

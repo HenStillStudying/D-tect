@@ -7,6 +7,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // A real (non-anonymous) sign-in whose uid is listed in /admins.
+    function isAdmin() {
+      return request.auth != null
+          && request.auth.token.firebase.sign_in_provider != 'anonymous'
+          && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
     match /quiz_history/{entryId} {
 
       // Signed-in (anonymous) users can only see and delete their own entries.
@@ -36,6 +43,53 @@ service cloud.firestore {
 
       // Entries are never edited after saving.
       allow update: if false;
+    }
+
+    // Admins: one document per admin, named by their Firebase Auth uid.
+    // Added and removed by hand in the Firebase console only; no app code
+    // can write here. An admin may read their own document, which is how
+    // admin.html checks access.
+    match /admins/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Opt-in research responses. Must stay in sync with
+    // saveResearchResponse() in app/js/services/research.js.
+    // Anyone using the quiz can add one (with consent); nobody can edit or
+    // delete one from the app; only admins can read them.
+    match /research_responses/{responseId} {
+      allow read: if isAdmin();
+
+      allow create: if request.auth != null
+                    && request.resource.data.keys().hasOnly(
+                         ['consent', 'answers', 'score', 'riskLevel', 'estimatedNgMl', 'lang', 'appVersion', 'createdAt'])
+                    && request.resource.data.keys().hasAll(
+                         ['consent', 'answers', 'score', 'riskLevel', 'estimatedNgMl', 'lang', 'appVersion', 'createdAt'])
+                    && request.resource.data.consent == true
+                    && request.resource.data.answers is map
+                    && request.resource.data.answers.keys().hasOnly(
+                         ['age', 'sex', 'skinTone', 'workType', 'heightCm', 'weightKg', 'location', 'bmi',
+                          'nightShift', 'worktime', 'indoorSunFreq', 'sunTime', 'outdoorSunTime',
+                          'outdoorSunBodyPart', 'recFreq', 'shadeUse', 'sunscreen', 'clothing',
+                          'lunchDuration', 'lunchTime', 'lunchLocation', 'supplements', 'dairyFreq',
+                          'seafoodFreq', 'eggFreq', 'medicalCondition', 'pregnant', 'breastfeeding'])
+                    && (!('location' in request.resource.data.answers)
+                        || (request.resource.data.answers.location is string
+                            && request.resource.data.answers.location.size() <= 100))
+                    && request.resource.data.score is number
+                    && request.resource.data.score >= 0
+                    && request.resource.data.score <= 100
+                    && request.resource.data.riskLevel in ['Green', 'Yellow', 'Orange', 'Red']
+                    && request.resource.data.estimatedNgMl is number
+                    && request.resource.data.estimatedNgMl >= 0
+                    && request.resource.data.estimatedNgMl <= 200
+                    && request.resource.data.lang in ['en', 'id']
+                    && request.resource.data.appVersion is string
+                    && request.resource.data.appVersion.size() <= 20
+                    && request.resource.data.createdAt == request.time;
+
+      allow update, delete: if false;
     }
 
     // Everything else is denied by default (no other match blocks).

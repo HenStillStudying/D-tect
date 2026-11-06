@@ -1064,6 +1064,19 @@ button:hover {
   margin-top: 4px;
 }
 
+.research-card {
+  background: #f6fbf6;
+  border: 1px solid #d9ecd9;
+  border-left: 4px solid #4caf50;
+}
+.research-text    { font-size: 0.85em; color: #555; line-height: 1.5; margin: 0 0 10px; }
+.research-consent { display: flex; gap: 8px; align-items: flex-start; font-size: 0.9em; margin-bottom: 10px; cursor: pointer; }
+.research-consent input { margin-top: 3px; }
+.research-card .secondary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.research-status  { font-size: 0.8em; color: #c62828; margin: 8px 0 0; }
+.research-status:empty { display: none; }
+.research-done    { font-size: 0.9em; color: #2e7d32; font-weight: bold; margin: 0; }
+
 .risk-card {
   background: #fffaf5;
   border: 1px solid #f5e6d3;
@@ -1563,6 +1576,17 @@ body.dark-mode .serum-disclaimer {
   color: #9aa8c0;
   border-top-color: #2d4568;
 }
+
+body.dark-mode .research-card {
+  background: #142218;
+  border-top-color: #24402a;
+  border-right-color: #24402a;
+  border-bottom-color: #24402a;
+}
+body.dark-mode .research-text    { color: #c7c7d1; }
+body.dark-mode .research-consent { color: #e8e8ec; }
+body.dark-mode .research-done    { color: #81c784; }
+body.dark-mode .research-status  { color: #ef9a9a; }
 
 body.dark-mode .risk-card {
   background: #241e14;

@@ -12,6 +12,7 @@ function saveProgress() {
       currentQuestionIndex: state.currentQuestionIndex,
       answers:              state.answers,
       uiState:              state.uiState,
+      researchShared:       state.researchShared,
       language:             currentLanguage,
       savedAt:              Date.now()
     };
@@ -50,6 +51,7 @@ function restoreProgress(data) {
   state.currentQuestionIndex = data.currentQuestionIndex || 0;
   state.answers              = data.answers || {};
   state.uiState              = data.uiState || "chapterIntro";
+  state.researchShared       = data.researchShared === true;
 
   if (data.language && data.language !== currentLanguage) {
     currentLanguage = data.language;
