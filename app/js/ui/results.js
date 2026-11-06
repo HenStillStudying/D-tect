@@ -14,7 +14,6 @@ function setSerumUnit(unit) {
   if (state.uiState === "result") showResult(true);
 }
 
-// Inside app/js/ui/results.js
 function showResult(skipSave) {
   var result = calculateScore();
   var rl     = getResultLabels();
@@ -22,15 +21,14 @@ function showResult(skipSave) {
 
   state.uiState = "result";
   if (!skipSave) {
+    // A newly completed quiz: nothing shared for it yet
+    state.researchShared = false;
+    state.isTestRun      = false;
     saveProgress();
 
     var userName = state.answers["Name"] || "Anonymous User";
-    
-    // UPDATE THIS LINE: Pass result.estimatedNgMl as the 4th argument
-    generateAndSaveReport(userName, result.score, result.level, result.estimatedNgMl);
+    generateAndSaveReport(userName, result.score, result.level);
   }
-
-  // ... (rest of your showResult code stays exactly the same)
 
   dom.quiz.classList.add("hidden");
   dom.quiz.innerHTML          = "";
@@ -81,12 +79,62 @@ function showResult(skipSave) {
 
     riskHTML +
 
+    buildResearchCard() +
+
     '<div class="result-actions">' +
       '<button class="secondary-btn" onclick="openHistoryWindow()">📜 ' + getUI().viewHistory + '</button>' +
       '<button class="retry-btn" onclick="showRecommendations()">' + getUI().viewRecommendations + '</button>' +
     '</div>';
 
   setTimeout(function() { dom.result.classList.add("show"); }, 50);
+}
+
+// Opt-in research sharing (research.js). Nothing is sent unless the user
+// ticks the box and presses Share. Hidden for test fills so test data never
+// reaches the research collection.
+function buildResearchCard() {
+  if (state.isTestRun) return "";
+  var ui = getUI();
+  var body = state.researchShared
+    ? '<p class="research-done">✓ ' + ui.researchThanks + '</p>'
+    : '<p class="research-text">' + ui.researchText + '</p>' +
+      '<label class="research-consent">' +
+        '<input type="checkbox" id="researchConsent" onchange="onResearchConsentChange(this)"> ' +
+        ui.researchConsent +
+      '</label>' +
+      '<button id="researchShareBtn" class="secondary-btn" onclick="shareResearch()" disabled>' + ui.researchShare + '</button>' +
+      '<p id="researchStatus" class="research-status"></p>';
+  return '<div class="result-card research-card">' +
+    '<div class="result-card-title">' + ui.researchTitle + '</div>' + body +
+  '</div>';
+}
+
+function onResearchConsentChange(box) {
+  var btn = document.getElementById("researchShareBtn");
+  if (btn) btn.disabled = !box.checked;
+}
+
+function shareResearch() {
+  var box    = document.getElementById("researchConsent");
+  var btn    = document.getElementById("researchShareBtn");
+  var status = document.getElementById("researchStatus");
+  if (!box || !box.checked || !btn || !lastResult || state.researchShared) return;
+
+  var ui = getUI();
+  btn.disabled    = true;
+  btn.textContent = ui.researchSending;
+  status.textContent = "";
+
+  saveResearchResponse(lastResult).then(function() {
+    state.researchShared = true;
+    saveProgress();
+    if (state.uiState === "result") showResult(true);
+  }).catch(function(err) {
+    console.error("Error saving research response:", err);
+    btn.disabled       = !box.checked;
+    btn.textContent    = getUI().researchShare;
+    status.textContent = getUI().researchError;
+  });
 }
 
 function showRecommendations() {

@@ -35,6 +35,13 @@ var uiStrings = {
     historyRiskLevel:    "Risk Level:",
     historyDate:         "Date:",
     historyDownload:     "Download PDF",
+    researchTitle:       "Help our research",
+    researchText:        "You can share your answers with the D-tect research team, without your name. The shared answers can't be linked to your history. This is optional and doesn't change your result.",
+    researchConsent:     "I agree to share my answers (without my name) for research.",
+    researchShare:       "Share my answers",
+    researchSending:     "Sending...",
+    researchThanks:      "Thank you! Your answers were shared without your name.",
+    researchError:       "Couldn't send your answers. Please try again.",
   },
   id: {
     startChapter: "Mulai Bab →",
@@ -65,6 +72,13 @@ var uiStrings = {
     historyRiskLevel:    "Tingkat Risiko:",
     historyDate:         "Tanggal:",
     historyDownload:     "Unduh PDF",
+    researchTitle:       "Bantu penelitian kami",
+    researchText:        "Anda dapat membagikan jawaban Anda kepada tim peneliti D-tect tanpa nama Anda. Jawaban yang dibagikan tidak dapat dikaitkan dengan riwayat Anda. Ini opsional dan tidak mengubah hasil Anda.",
+    researchConsent:     "Saya setuju membagikan jawaban saya (tanpa nama) untuk penelitian.",
+    researchShare:       "Bagikan jawaban saya",
+    researchSending:     "Mengirim...",
+    researchThanks:      "Terima kasih! Jawaban Anda telah dibagikan tanpa nama.",
+    researchError:       "Gagal mengirim jawaban. Silakan coba lagi.",
   }
 };
 

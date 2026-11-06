@@ -54,6 +54,8 @@ var state = {
   currentQuestionIndex: 0,
   answers:              {},
   uiState:              "chapterIntro",
+  researchShared:       false,  // research response already sent for this result
+  isTestRun:            false,  // result came from a test fill (never shared)
 
   get allQuestions() {
     var all = [];
@@ -67,5 +69,7 @@ var state = {
     this.currentQuestionIndex = 0;
     this.answers              = {};
     this.uiState              = "chapterIntro";
+    this.researchShared       = false;
+    this.isTestRun            = false;
   }
 };
